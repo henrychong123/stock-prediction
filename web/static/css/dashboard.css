@@ -479,6 +479,9 @@ body {
 .platform-tag.finnhub-figures { background: rgba(124,77,255,0.2); color: var(--accent-purple); }
 .platform-tag.gdelt { background: rgba(255,110,64,0.2); color: #ff6e40; }
 .platform-tag.reddit { background: rgba(255,69,0,0.2); color: #ff4500; }
+.platform-tag.google-news-my { background: rgba(0,200,83,0.2); color: var(--accent-green); }
+.platform-tag.theedge-my { background: rgba(0,229,255,0.2); color: var(--accent-cyan); }
+.platform-tag.newsapi-my { background: rgba(255,193,7,0.2); color: var(--accent-yellow); }
 
 .figure-tag {
     display: inline-block;

@@ -6,6 +6,7 @@ finnhub-python>=2.4.19
 transformers>=4.36.0
 torch>=2.1.0
 newsapi-python>=0.2.7
+feedparser>=6.0.10
 
 # Geopolitical event tracking
 gdelt-doc-api>=1.4.0

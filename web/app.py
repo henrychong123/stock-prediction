@@ -256,6 +256,29 @@ def api_news_all():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/news/my")
+def api_news_my():
+    """Get Malaysian news from all MY sources (Google News, TheEdge, NewsAPI)."""
+    from src.data_sources.news_my import fetch_all_my_news
+    from src.database import save_news
+
+    try:
+        articles = fetch_all_my_news()
+        for a in articles:
+            save_news(
+                platform=a.get("platform", "google-news-my"),
+                headline=a.get("headline", ""),
+                summary=a.get("summary", ""),
+                url=a.get("url", ""),
+                source_name=a.get("source", ""),
+                sentiment_label=a.get("sentiment", {}).get("label", ""),
+                sentiment_score=a.get("sentiment", {}).get("score", 0),
+            )
+        return jsonify({"articles": articles, "count": len(articles)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/news/fetch-all")
 def api_news_fetch_all():
     """Fetch news from ALL platforms, save to DB, return combined."""
@@ -263,6 +286,7 @@ def api_news_fetch_all():
         fetch_market_news, fetch_influential_figure_news
     )
     from src.data_sources.geopolitical import fetch_geopolitical_events
+    from src.data_sources.news_my import fetch_all_my_news, fetch_my_influential_news
     from src.database import save_news, get_all_news, get_news_stats
 
     saved_count = 0
@@ -319,6 +343,39 @@ def api_news_fetch_all():
                     related_symbol=e.get("keyword", ""),
                 )
                 saved_count += 1
+    except Exception:
+        pass
+
+    # 4. Malaysia news (Google News RSS + TheEdge + NewsAPI)
+    try:
+        my_articles = fetch_all_my_news()
+        for a in my_articles:
+            save_news(
+                platform=a.get("platform", "google-news-my"),
+                headline=a.get("headline", ""),
+                summary=a.get("summary", ""),
+                url=a.get("url", ""),
+                source_name=a.get("source", ""),
+                sentiment_label=a.get("sentiment", {}).get("label", ""),
+                sentiment_score=a.get("sentiment", {}).get("score", 0),
+            )
+            saved_count += 1
+    except Exception:
+        pass
+
+    # 5. Malaysian influential figures
+    try:
+        my_figures = fetch_my_influential_news()
+        for n in my_figures:
+            save_news(
+                platform="google-news-my",
+                headline=n.get("headline", ""),
+                source_name=n.get("source", ""),
+                sentiment_label=n.get("sentiment", {}).get("label", ""),
+                sentiment_score=n.get("sentiment", {}).get("score", 0),
+                related_figure=n.get("figure", ""),
+            )
+            saved_count += 1
     except Exception:
         pass
 

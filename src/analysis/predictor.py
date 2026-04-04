@@ -107,35 +107,74 @@ def combine_signals(signals: dict, weights: dict | None = None) -> tuple[str, fl
 def predict(symbol: str) -> PredictionResult:
     """Run full prediction pipeline for a stock.
 
-    Fetches data from all sources, analyzes signals, and produces a prediction.
+    Automatically detects market (US vs MY) and uses appropriate data sources.
     """
     from src.data_sources.stock_prices import get_realtime_quote, get_technical_signal
     from src.data_sources.news_sentiment import get_news_signal, fetch_influential_figure_news
     from src.data_sources.geopolitical import get_geopolitical_signal
     from src.data_sources.social_media import get_social_signal
 
-    # Gather all signals
+    # Detect market
+    is_my = symbol.endswith(".KL") or symbol.startswith("^KL")
+    if is_my:
+        from config.settings import MY_SIGNAL_WEIGHTS, MY_GEOPOLITICAL_KEYWORDS
+        weights = MY_SIGNAL_WEIGHTS
+    else:
+        weights = SIGNAL_WEIGHTS
+
+    # [1/5] Technical indicators (works for both markets via yfinance)
     print(f"  [1/5] Analyzing technical indicators for {symbol}...")
     technical = get_technical_signal(symbol)
 
+    # [2/5] News sentiment (different sources per market)
     print(f"  [2/5] Analyzing news sentiment for {symbol}...")
-    news = get_news_signal(symbol)
+    if is_my:
+        from src.data_sources.news_my import get_my_news_signal
+        news = get_my_news_signal(symbol)
+    else:
+        news = get_news_signal(symbol)
 
+    # [3/5] Social media
     print(f"  [3/5] Scanning social media for {symbol}...")
     social = get_social_signal(symbol)
 
+    # [4/5] Geopolitical events
     print(f"  [4/5] Checking geopolitical events...")
-    geopolitical = get_geopolitical_signal()
+    if is_my:
+        geopolitical = get_geopolitical_signal()
+        # Also check MY-specific geopolitical keywords
+        try:
+            from src.data_sources.geopolitical import fetch_geopolitical_events
+            my_events = fetch_geopolitical_events(keywords=MY_GEOPOLITICAL_KEYWORDS, max_records=20)
+            if my_events and "error" not in my_events[0]:
+                tones = [e.get("tone", 0) for e in my_events if isinstance(e.get("tone"), (int, float))]
+                if tones:
+                    avg_tone = sum(tones) / len(tones)
+                    # Blend MY geopolitical with global
+                    geo_strength = geopolitical.get("strength", 0.5)
+                    my_strength = (max(min(avg_tone / 10, 1), -1) + 1) / 2
+                    geopolitical["strength"] = round((geo_strength * 0.4) + (my_strength * 0.6), 3)
+                    geopolitical["reasons"] = geopolitical.get("reasons", []) + [
+                        f"[MY] {e.get('title', 'N/A')}" for e in my_events[:3] if "error" not in e
+                    ]
+        except Exception:
+            pass
+    else:
+        geopolitical = get_geopolitical_signal()
 
+    # [5/5] Influential figures
     print(f"  [5/5] Monitoring influential figures...")
-    figure_news = fetch_influential_figure_news()
+    if is_my:
+        from src.data_sources.news_my import fetch_my_influential_news
+        figure_news = fetch_my_influential_news()
+    else:
+        figure_news = fetch_influential_figure_news()
 
     # Incorporate influential figure news into social signal
     if figure_news and "error" not in figure_news[0]:
         figure_scores = [n["sentiment"]["score"] for n in figure_news]
         if figure_scores:
             avg_figure = sum(figure_scores) / len(figure_scores)
-            # Blend figure sentiment into social signal
             current_social_strength = social.get("strength", 0.5)
             blended = (current_social_strength * 0.6) + (((avg_figure + 1) / 2) * 0.4)
             social["strength"] = round(blended, 3)
@@ -161,13 +200,13 @@ def predict(symbol: str) -> PredictionResult:
     quote = get_realtime_quote(symbol)
     current_price = quote.get("current_price", 0)
 
-    # Combine signals
-    action, confidence = combine_signals(signals)
+    # Combine signals (with market-appropriate weights)
+    action, confidence = combine_signals(signals, weights)
 
     # Compute directional score for DB storage
     score = 0
     for name, sig in signals.items():
-        w = SIGNAL_WEIGHTS.get(name, 0)
+        w = weights.get(name, 0)
         s = sig.get("strength", 0.5)
         score += ((s - 0.5) * 2) * w
 
@@ -182,7 +221,7 @@ def predict(symbol: str) -> PredictionResult:
         from src.database import save_prediction
         save_prediction(symbol, action, confidence, current_price, score, signals, all_reasons)
     except Exception:
-        pass  # Don't let DB errors break predictions
+        pass
 
     return PredictionResult(
         symbol=symbol,

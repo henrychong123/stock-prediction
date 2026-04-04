@@ -175,7 +175,7 @@
             <div class="newshub-header">
                 <div>
                     <h3>Unified News Hub</h3>
-                    <p class="hint">Aggregates news from all platforms: Finnhub market news, influential figures coverage, and GDELT geopolitical events. All stored in the database for historical tracking.</p>
+                    <p class="hint">Aggregates news from all platforms: Finnhub (US), Google News MY, The Edge Markets, GDELT geopolitical, and influential figures. All stored in database.</p>
                 </div>
                 <div class="newshub-actions">
                     <button id="fetch-all-news-btn" onclick="fetchAllNews()">Fetch Latest from All Platforms</button>
@@ -222,8 +222,11 @@
             <div class="filter-bar">
                 <span>Filter:</span>
                 <button class="filter-btn active" onclick="filterNews('all')">All</button>
-                <button class="filter-btn" onclick="filterNews('finnhub')">Market News</button>
-                <button class="filter-btn" onclick="filterNews('finnhub-figures')">Influential Figures</button>
+                <button class="filter-btn" onclick="filterNews('finnhub')">US Market</button>
+                <button class="filter-btn" onclick="filterNews('google-news-my')">MY Google News</button>
+                <button class="filter-btn" onclick="filterNews('theedge-my')">The Edge MY</button>
+                <button class="filter-btn" onclick="filterNews('newsapi-my')">NewsAPI MY</button>
+                <button class="filter-btn" onclick="filterNews('finnhub-figures')">Figures (US)</button>
                 <button class="filter-btn" onclick="filterNews('gdelt')">Geopolitical</button>
             </div>
         </div>
