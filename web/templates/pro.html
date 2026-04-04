@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Prediction - Pro Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pro.css') }}">
+</head>
+<body>
+    <!-- TOP BAR -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <h1>STOCKPRED <span class="pro-badge">PRO</span></h1>
+        </div>
+        <div class="topbar-center" id="market-ticker"></div>
+        <div class="topbar-right">
+            <div class="refresh-control">
+                <span class="refresh-dot" id="refresh-dot"></span>
+                <select id="refresh-rate" onchange="setRefreshRate()">
+                    <option value="0">Manual</option>
+                    <option value="10">10s</option>
+                    <option value="30" selected>30s</option>
+                    <option value="60">1m</option>
+                    <option value="300">5m</option>
+                </select>
+            </div>
+            <span id="clock" class="clock"></span>
+        </div>
+    </header>
+
+    <!-- MAIN GRID LAYOUT -->
+    <div class="dashboard-grid">
+
+        <!-- LEFT PANEL: WATCHLIST -->
+        <aside class="panel panel-watchlist">
+            <div class="panel-header">
+                <h2>Watchlist</h2>
+                <div class="watchlist-controls">
+                    <input type="text" id="add-symbol" placeholder="+ Add" onkeydown="if(event.key==='Enter')addToWatchlist()" />
+                </div>
+            </div>
+            <div class="watchlist-table-wrap">
+                <table class="watchlist-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Price</th>
+                            <th>Chg%</th>
+                            <th>Signal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="watchlist-body"></tbody>
+                </table>
+            </div>
+            <div class="panel-footer">
+                <button class="btn-sm" onclick="refreshWatchlist()">Refresh</button>
+                <span id="watchlist-updated" class="updated-text"></span>
+            </div>
+        </aside>
+
+        <!-- CENTER: MAIN CHART + PREDICTION -->
+        <main class="panel panel-main">
+            <!-- Active Stock Header -->
+            <div class="stock-header">
+                <div class="stock-info">
+                    <span id="active-symbol" class="active-symbol">SPY</span>
+                    <span id="active-price" class="active-price">-</span>
+                    <span id="active-change" class="active-change">-</span>
+                </div>
+                <div class="timeframe-btns">
+                    <button onclick="changeTimeframe('1mo')">1M</button>
+                    <button onclick="changeTimeframe('3mo')">3M</button>
+                    <button class="active" onclick="changeTimeframe('6mo')">6M</button>
+                    <button onclick="changeTimeframe('1y')">1Y</button>
+                    <button onclick="changeTimeframe('2y')">2Y</button>
+                </div>
+            </div>
+
+            <!-- Price Chart -->
+            <div class="chart-container">
+                <canvas id="main-chart"></canvas>
+            </div>
+
+            <!-- Sub-charts row -->
+            <div class="subchart-row">
+                <div class="subchart">
+                    <canvas id="mini-rsi"></canvas>
+                </div>
+                <div class="subchart">
+                    <canvas id="mini-macd"></canvas>
+                </div>
+                <div class="subchart">
+                    <canvas id="mini-volume"></canvas>
+                </div>
+            </div>
+        </main>
+
+        <!-- RIGHT PANEL TOP: PREDICTION -->
+        <aside class="panel panel-prediction">
+            <div class="panel-header">
+                <h2>AI Prediction</h2>
+                <button class="btn-sm btn-accent" id="run-predict-btn" onclick="runPrediction()">Run</button>
+            </div>
+
+            <div id="predict-loading" class="mini-loading hidden">Analyzing...</div>
+
+            <div id="prediction-result" class="prediction-box">
+                <div class="pred-action-row">
+                    <span id="p-action" class="pred-action">-</span>
+                    <span id="p-confidence" class="pred-conf">-</span>
+                </div>
+                <!-- Signal Bars -->
+                <div id="signal-bars" class="signal-bars"></div>
+            </div>
+
+            <!-- Mini reasons -->
+            <div id="pred-reasons" class="pred-reasons"></div>
+        </aside>
+
+        <!-- BOTTOM LEFT: SECTOR HEATMAP -->
+        <section class="panel panel-sectors">
+            <div class="panel-header">
+                <h2>Sector Heatmap</h2>
+                <button class="btn-sm" onclick="loadSectorHeatmap()">Load</button>
+            </div>
+            <div id="sector-loading" class="mini-loading hidden">Loading sectors...</div>
+            <div id="sector-heatmap" class="sector-heatmap"></div>
+        </section>
+
+        <!-- BOTTOM CENTER: MARKET OVERVIEW -->
+        <section class="panel panel-overview">
+            <div class="panel-header">
+                <h2>Market Overview</h2>
+                <button class="btn-sm" onclick="loadMarketOverview()">Refresh</button>
+            </div>
+            <div id="overview-loading" class="mini-loading hidden">Loading...</div>
+            <div id="market-overview" class="market-grid"></div>
+        </section>
+
+        <!-- BOTTOM RIGHT: LIVE NEWS FEED -->
+        <section class="panel panel-news">
+            <div class="panel-header">
+                <h2>Live News</h2>
+                <button class="btn-sm" onclick="loadLiveNews()">Fetch</button>
+            </div>
+            <div id="news-loading" class="mini-loading hidden">Fetching...</div>
+            <div id="news-feed" class="news-feed"></div>
+        </section>
+
+    </div>
+
+    <script src="{{ url_for('static', filename='js/pro.js') }}"></script>
+</body>
+</html>

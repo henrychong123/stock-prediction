@@ -26,6 +26,12 @@ def index():
     return render_template("dashboard.html")
 
 
+@app.route("/pro")
+def pro_dashboard():
+    """Professional analyst dashboard."""
+    return render_template("pro.html")
+
+
 @app.route("/api/predict/<symbol>")
 def api_predict(symbol):
     """Run prediction for a single stock."""
@@ -55,6 +61,55 @@ def api_quote(symbol):
         return jsonify(quote)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/quotes")
+def api_quotes_batch():
+    """Batch quotes for watchlist - lightweight endpoint for auto-refresh."""
+    from src.data_sources.stock_prices import get_realtime_quote
+
+    symbols = request.args.get("symbols", "").upper().split(",")
+    symbols = [s.strip() for s in symbols if s.strip()]
+    if not symbols:
+        return jsonify({"error": "No symbols provided"}), 400
+
+    quotes = []
+    for symbol in symbols[:20]:  # Cap at 20 to respect rate limits
+        try:
+            q = get_realtime_quote(symbol)
+            quotes.append(q)
+        except Exception:
+            quotes.append({"symbol": symbol, "error": "Failed to fetch"})
+
+    return jsonify({"quotes": quotes, "timestamp": datetime.now().isoformat()})
+
+
+@app.route("/api/market-overview")
+def api_market_overview():
+    """Market overview: major indices, VIX, commodities, crypto."""
+    from src.data_sources.stock_prices import get_realtime_quote
+
+    # Key market indicators
+    indicators = {
+        "indices": ["SPY", "QQQ", "DIA", "IWM"],       # S&P500, Nasdaq, Dow, Russell
+        "volatility": ["VXX"],                            # VIX proxy
+        "commodities": ["GLD", "USO", "SLV"],            # Gold, Oil, Silver
+        "crypto": ["BTC-USD", "ETH-USD"],                 # Bitcoin, Ethereum
+        "bonds": ["TLT", "SHY"],                          # Long/short term bonds
+        "sectors_top": ["XLK", "XLF", "XLE", "XLV"],     # Tech, Finance, Energy, Health
+    }
+
+    result = {}
+    for category, symbols in indicators.items():
+        result[category] = []
+        for symbol in symbols:
+            try:
+                q = get_realtime_quote(symbol)
+                result[category].append(q)
+            except Exception:
+                result[category].append({"symbol": symbol, "error": "Failed"})
+
+    return jsonify({"overview": result, "timestamp": datetime.now().isoformat()})
 
 
 @app.route("/api/history/<symbol>")
