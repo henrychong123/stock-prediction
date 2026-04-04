@@ -84,6 +84,27 @@ body {
 .tab-content { display: none; padding: 24px 32px; }
 .tab-content.active { display: block; }
 
+/* ===== MARKET SELECTOR ===== */
+.market-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.market-selector span { color: var(--text-muted); font-size: 0.85rem; }
+.market-btn {
+    padding: 8px 20px;
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+.market-btn:hover { border-color: var(--accent-blue); color: var(--text-primary); }
+.market-btn.active { border-color: var(--accent-cyan); color: var(--accent-cyan); background: rgba(0,229,255,0.08); font-weight: 600; }
+
 /* ===== SEARCH BAR ===== */
 .search-bar {
     display: flex;

@@ -1,17 +1,17 @@
 """
 Industry sector analysis and prediction.
 
-Defines 11 GICS sectors with representative stocks, then runs predictions
-at the sector level by aggregating individual stock signals.
+Supports multiple markets (US, Malaysia). Defines sectors with representative
+stocks, then runs predictions at the sector level by aggregating signals.
 """
 
 from dataclasses import dataclass, field
 
-from config.settings import SIGNAL_WEIGHTS
+from config.settings import SIGNAL_WEIGHTS, MY_SIGNAL_WEIGHTS
 
 
-# 11 GICS Sectors with representative high-cap stocks
-SECTORS = {
+# ===== US SECTORS (11 GICS) =====
+US_SECTORS = {
     "Technology": {
         "description": "Software, hardware, semiconductors, IT services",
         "symbols": ["AAPL", "MSFT", "NVDA", "AVGO", "CRM"],
@@ -69,6 +69,60 @@ SECTORS = {
     },
 }
 
+# ===== MALAYSIA SECTORS =====
+# Malaysia doesn't have sector ETFs, so we use top stocks per sector.
+# The "etf" field uses the sector leader as proxy for analysis.
+MY_SECTORS = {
+    "Banking & Finance": {
+        "description": "Banks, insurance, capital markets",
+        "symbols": ["1155.KL", "1295.KL", "1023.KL", "5819.KL", "1066.KL"],
+        "etf": "1155.KL",  # Maybank as proxy (largest bank)
+    },
+    "Oil & Gas": {
+        "description": "Petronas-linked, upstream, downstream, services",
+        "symbols": ["5183.KL", "5235.KL", "6033.KL", "5218.KL", "5681.KL"],
+        "etf": "5183.KL",  # Petronas Chemicals as proxy
+    },
+    "Telecommunications": {
+        "description": "Mobile, broadband, digital services",
+        "symbols": ["6947.KL", "6888.KL", "6012.KL", "4863.KL"],
+        "etf": "6947.KL",  # CelcomDigi as proxy
+    },
+    "Plantation": {
+        "description": "Palm oil, rubber, timber, agriculture",
+        "symbols": ["5285.KL", "2445.KL", "1961.KL"],
+        "etf": "5285.KL",  # Sime Darby Plantation as proxy
+    },
+    "Healthcare": {
+        "description": "Hospitals, gloves, pharma, medical devices",
+        "symbols": ["5225.KL", "5168.KL", "7113.KL"],
+        "etf": "5225.KL",  # IHH Healthcare as proxy
+    },
+    "Utilities & Power": {
+        "description": "Electricity, gas, water, renewable energy",
+        "symbols": ["5347.KL", "6742.KL"],
+        "etf": "5347.KL",  # Tenaga Nasional as proxy
+    },
+    "Consumer & Retail": {
+        "description": "F&B, retail, consumer goods",
+        "symbols": ["4707.KL", "7084.KL"],
+        "etf": "4707.KL",  # Nestle Malaysia as proxy
+    },
+    "Industrial & Manufacturing": {
+        "description": "Metals, manufacturing, construction, shipping",
+        "symbols": ["8869.KL", "3816.KL"],
+        "etf": "8869.KL",  # Press Metal as proxy
+    },
+    "Gaming & Leisure": {
+        "description": "Casinos, resorts, entertainment",
+        "symbols": ["3182.KL", "4715.KL"],
+        "etf": "3182.KL",  # Genting Bhd as proxy
+    },
+}
+
+# Keep backward compatible reference
+SECTORS = US_SECTORS
+
 
 @dataclass
 class SectorResult:
@@ -78,41 +132,56 @@ class SectorResult:
     action: str
     confidence: float
     avg_score: float
+    market: str = "US"
     stock_results: list[dict] = field(default_factory=list)
     top_reasons: list[str] = field(default_factory=list)
     signal_breakdown: dict = field(default_factory=dict)
 
 
-def analyze_sector_etf(sector_name: str) -> SectorResult:
-    """Analyze a sector using its ETF for a quick high-level view.
+def get_sectors(market: str = "US") -> dict:
+    """Get sector definitions for a given market."""
+    if market == "MY":
+        return MY_SECTORS
+    return US_SECTORS
 
-    Uses the sector ETF (e.g., XLK for Technology) for technical analysis,
-    which is much faster than analyzing every individual stock.
-    """
-    from src.data_sources.stock_prices import get_technical_signal, get_realtime_quote
-    from src.data_sources.news_sentiment import analyze_sentiment, fetch_market_news
+
+def analyze_sector_etf(sector_name: str, market: str = "US") -> SectorResult:
+    """Analyze a sector using its ETF/proxy for a quick high-level view."""
+    from src.data_sources.stock_prices import get_technical_signal
+    from src.data_sources.news_sentiment import fetch_market_news
     from src.analysis.predictor import combine_signals
 
-    sector = SECTORS.get(sector_name)
+    sectors = get_sectors(market)
+    weights = MY_SIGNAL_WEIGHTS if market == "MY" else SIGNAL_WEIGHTS
+
+    sector = sectors.get(sector_name)
     if not sector:
         return SectorResult(
             name=sector_name, description="Unknown", etf="",
-            action="HOLD", confidence=0, avg_score=0,
+            action="HOLD", confidence=0, avg_score=0, market=market,
         )
 
     etf = sector["etf"]
 
-    # Technical signal from sector ETF
+    # Technical signal from sector ETF/proxy
     technical = get_technical_signal(etf)
 
-    # Sector-specific news sentiment (keyword search from market news)
+    # Sector-specific news sentiment
     news_signal = {"signal": "neutral", "strength": 0.5, "reasons": []}
     try:
         market_news = fetch_market_news()
         if market_news and "error" not in market_news[0]:
             sector_keywords = sector_name.lower().split() + [
-                s.lower() for s in sector["symbols"]
+                s.lower().replace(".kl", "") for s in sector["symbols"]
             ]
+            # Add Malaysia-specific keywords
+            if market == "MY":
+                from config.settings import MY_STOCK_NAMES
+                for sym in sector["symbols"]:
+                    name = MY_STOCK_NAMES.get(sym, "")
+                    if name:
+                        sector_keywords.append(name.lower())
+
             relevant = []
             for article in market_news:
                 text = f"{article.get('headline', '')} {article.get('summary', '')}".lower()
@@ -144,12 +213,12 @@ def analyze_sector_etf(sector_name: str) -> SectorResult:
         "market_momentum": momentum,
     }
 
-    action, confidence = combine_signals(signals)
+    action, confidence = combine_signals(signals, weights)
 
-    # Compute a directional score for sorting
+    # Compute directional score
     score = 0
     for name, sig in signals.items():
-        w = SIGNAL_WEIGHTS.get(name, 0)
+        w = weights.get(name, 0)
         s = sig.get("strength", 0.5)
         score += ((s - 0.5) * 2) * w
 
@@ -177,16 +246,18 @@ def analyze_sector_etf(sector_name: str) -> SectorResult:
         action=action,
         confidence=confidence,
         avg_score=round(score, 3),
+        market=market,
         top_reasons=all_reasons,
         signal_breakdown=signal_breakdown,
     )
 
 
-def analyze_all_sectors() -> list[SectorResult]:
-    """Run analysis on all 11 GICS sectors. Returns sorted by score."""
+def analyze_all_sectors(market: str = "US") -> list[SectorResult]:
+    """Run analysis on all sectors for a given market. Returns sorted by score."""
+    sectors = get_sectors(market)
     results = []
-    for name in SECTORS:
-        result = analyze_sector_etf(name)
+    for name in sectors:
+        result = analyze_sector_etf(name, market=market)
         results.append(result)
 
     results.sort(key=lambda r: r.avg_score, reverse=True)
@@ -194,8 +265,9 @@ def analyze_all_sectors() -> list[SectorResult]:
 
 
 def get_sector_for_symbol(symbol: str) -> str | None:
-    """Find which sector a stock belongs to."""
-    for sector_name, info in SECTORS.items():
-        if symbol in info["symbols"]:
-            return sector_name
+    """Find which sector a stock belongs to (checks both markets)."""
+    for sectors in [US_SECTORS, MY_SECTORS]:
+        for sector_name, info in sectors.items():
+            if symbol in info["symbols"]:
+                return sector_name
     return None

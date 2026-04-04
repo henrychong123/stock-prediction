@@ -89,15 +89,27 @@ def api_market_overview():
     """Market overview: major indices, VIX, commodities, crypto."""
     from src.data_sources.stock_prices import get_realtime_quote
 
-    # Key market indicators
-    indicators = {
-        "indices": ["SPY", "QQQ", "DIA", "IWM"],       # S&P500, Nasdaq, Dow, Russell
-        "volatility": ["VXX"],                            # VIX proxy
-        "commodities": ["GLD", "USO", "SLV"],            # Gold, Oil, Silver
-        "crypto": ["BTC-USD", "ETH-USD"],                 # Bitcoin, Ethereum
-        "bonds": ["TLT", "SHY"],                          # Long/short term bonds
-        "sectors_top": ["XLK", "XLF", "XLE", "XLV"],     # Tech, Finance, Energy, Health
-    }
+    market = request.args.get("market", "US").upper()
+
+    if market == "MY":
+        indicators = {
+            "index": ["^KLSE"],                                     # KLCI
+            "banking": ["1155.KL", "1295.KL", "1023.KL"],          # Maybank, PBB, CIMB
+            "oil_gas": ["5183.KL", "5235.KL"],                     # PetChem, PGas
+            "telco": ["6947.KL", "6888.KL"],                       # CelcomDigi, Axiata
+            "plantation": ["5285.KL", "2445.KL"],                  # Sime Darby P, KLK
+            "others": ["5347.KL", "5225.KL", "8869.KL"],           # TNB, IHH, Press Metal
+            "global_ref": ["GLD", "USO", "BTC-USD"],               # Global references
+        }
+    else:
+        indicators = {
+            "indices": ["SPY", "QQQ", "DIA", "IWM"],       # S&P500, Nasdaq, Dow, Russell
+            "volatility": ["VXX"],                            # VIX proxy
+            "commodities": ["GLD", "USO", "SLV"],            # Gold, Oil, Silver
+            "crypto": ["BTC-USD", "ETH-USD"],                 # Bitcoin, Ethereum
+            "bonds": ["TLT", "SHY"],                          # Long/short term bonds
+            "sectors_top": ["XLK", "XLF", "XLE", "XLV"],     # Tech, Finance, Energy, Health
+        }
 
     result = {}
     for category, symbols in indicators.items():
@@ -146,10 +158,13 @@ def api_history(symbol):
 @app.route("/api/sectors")
 def api_sectors():
     """Get analysis for all industry sectors."""
-    from src.analysis.sector_analysis import analyze_all_sectors, SECTORS
+    from src.analysis.sector_analysis import analyze_all_sectors, get_sectors
+
+    market = request.args.get("market", "US").upper()
 
     try:
-        results = analyze_all_sectors()
+        sectors_def = get_sectors(market)
+        results = analyze_all_sectors(market=market)
         sectors = []
         for r in results:
             sectors.append({
@@ -159,11 +174,12 @@ def api_sectors():
                 "action": r.action,
                 "confidence": r.confidence,
                 "score": r.avg_score,
-                "symbols": SECTORS[r.name]["symbols"],
+                "market": market,
+                "symbols": sectors_def[r.name]["symbols"],
                 "signal_breakdown": r.signal_breakdown,
                 "reasons": r.top_reasons,
             })
-        return jsonify({"sectors": sectors, "timestamp": datetime.now().isoformat()})
+        return jsonify({"sectors": sectors, "market": market, "timestamp": datetime.now().isoformat()})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -384,6 +400,17 @@ def api_sector_history():
         return jsonify({"history": history})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/markets")
+def api_markets():
+    """Get available markets and their config."""
+    from config.settings import MARKETS, MY_STOCK_NAMES
+
+    return jsonify({
+        "markets": MARKETS,
+        "my_stock_names": MY_STOCK_NAMES,
+    })
 
 
 if __name__ == "__main__":

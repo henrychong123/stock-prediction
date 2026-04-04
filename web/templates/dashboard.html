@@ -30,6 +30,13 @@
 
     <!-- ===== TAB 1: STOCK ANALYSIS ===== -->
     <div id="stock-tab" class="tab-content active">
+        <!-- Market Selector -->
+        <div class="market-selector">
+            <span>Market:</span>
+            <button class="market-btn active" onclick="switchDashMarket('US')">US (NYSE/NASDAQ)</button>
+            <button class="market-btn" onclick="switchDashMarket('MY')">Malaysia (Bursa/KLSE)</button>
+        </div>
+
         <!-- Search Bar -->
         <div class="search-bar">
             <input type="text" id="symbol-input" placeholder="Enter stock symbol (e.g., TSLA, AAPL, NVDA)" />
@@ -44,7 +51,7 @@
         </div>
 
         <!-- Quick Picks -->
-        <div class="quick-picks">
+        <div id="quick-picks-us" class="quick-picks">
             <span>Quick:</span>
             <button onclick="quickAnalyze('TSLA')">TSLA</button>
             <button onclick="quickAnalyze('AAPL')">AAPL</button>
@@ -53,6 +60,18 @@
             <button onclick="quickAnalyze('AMZN')">AMZN</button>
             <button onclick="quickAnalyze('MSFT')">MSFT</button>
             <button onclick="quickAnalyze('META')">META</button>
+        </div>
+        <div id="quick-picks-my" class="quick-picks hidden">
+            <span>Quick:</span>
+            <button onclick="quickAnalyze('1155.KL')">Maybank</button>
+            <button onclick="quickAnalyze('1295.KL')">Public Bank</button>
+            <button onclick="quickAnalyze('1023.KL')">CIMB</button>
+            <button onclick="quickAnalyze('5347.KL')">Tenaga</button>
+            <button onclick="quickAnalyze('5183.KL')">PetChem</button>
+            <button onclick="quickAnalyze('5225.KL')">IHH</button>
+            <button onclick="quickAnalyze('8869.KL')">Press Metal</button>
+            <button onclick="quickAnalyze('6947.KL')">CelcomDigi</button>
+            <button onclick="quickAnalyze('3182.KL')">Genting</button>
         </div>
 
         <!-- Loading indicator -->

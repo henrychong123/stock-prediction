@@ -1,9 +1,18 @@
 /* ===== Pro Dashboard - Bloomberg Terminal Style ===== */
 
 // ===== STATE =====
+let activeMarket = 'US';
 let activeSymbol = 'SPY';
 let activeTimeframe = '6mo';
-let watchlist = ['SPY', 'QQQ', 'AAPL', 'TSLA', 'NVDA', 'MSFT', 'GOOGL', 'AMZN', 'META', 'JPM'];
+let myStockNames = {};  // Loaded from API
+
+const WATCHLISTS = {
+    US: ['SPY', 'QQQ', 'AAPL', 'TSLA', 'NVDA', 'MSFT', 'GOOGL', 'AMZN', 'META', 'JPM'],
+    MY: ['1155.KL', '1295.KL', '1023.KL', '5347.KL', '5183.KL', '5225.KL', '6888.KL', '6947.KL', '5819.KL', '8869.KL'],
+};
+const MARKET_DEFAULTS = { US: 'SPY', MY: '1155.KL' };
+
+let watchlist = [...WATCHLISTS.US];
 let watchlistData = {};
 let refreshInterval = null;
 let refreshRate = 30;
@@ -18,13 +27,49 @@ Chart.defaults.font.family = "'SF Mono', 'Fira Code', 'Consolas', monospace";
 Chart.defaults.font.size = 10;
 
 // ===== INIT =====
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Load market config (stock names etc.)
+    try {
+        const res = await fetch('/api/markets');
+        const data = await res.json();
+        myStockNames = data.my_stock_names || {};
+    } catch (e) { /* ignore */ }
+
     updateClock();
     setInterval(updateClock, 1000);
     refreshWatchlist();
     setRefreshRate();
-    selectStock('SPY');
+    selectStock(MARKET_DEFAULTS[activeMarket]);
 });
+
+// ===== MARKET SWITCHING =====
+function switchMarket(market) {
+    activeMarket = market;
+    watchlist = [...(WATCHLISTS[market] || WATCHLISTS.US)];
+    watchlistData = {};
+
+    // Update buttons
+    document.querySelectorAll('.mkt-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.mkt-btn').forEach(b => {
+        if (b.textContent.trim() === market) b.classList.add('active');
+    });
+
+    // Reset and reload
+    refreshWatchlist();
+    selectStock(MARKET_DEFAULTS[market] || watchlist[0]);
+
+    // Clear sector heatmap
+    document.getElementById('sector-heatmap').innerHTML = '';
+    document.getElementById('market-overview').innerHTML = '';
+}
+
+// Helper: get friendly name for a symbol
+function getStockName(symbol) {
+    if (activeMarket === 'MY' && myStockNames[symbol]) {
+        return myStockNames[symbol];
+    }
+    return symbol;
+}
 
 // ===== CLOCK =====
 function updateClock() {
@@ -90,10 +135,13 @@ async function refreshWatchlist() {
             else if (chg < -1) { signal = 'SELL'; sigClass = 'sell'; }
             else { signal = 'HOLD'; sigClass = 'hold'; }
 
+            const displayName = getStockName(q.symbol);
+            const currency = activeMarket === 'MY' ? 'RM' : '$';
+
             tbody.innerHTML += `
-                <tr class="${isActive}" onclick="selectStock('${q.symbol}')">
-                    <td class="w-sym">${q.symbol}</td>
-                    <td class="w-price">$${q.current_price.toFixed(2)}</td>
+                <tr class="${isActive}" onclick="selectStock('${q.symbol}')" title="${q.symbol}">
+                    <td class="w-sym">${displayName}</td>
+                    <td class="w-price">${currency}${q.current_price.toFixed(2)}</td>
                     <td style="color:${chgColor}">${chgSign}${chg.toFixed(2)}%</td>
                     <td><span class="w-signal ${sigClass}">${signal}</span></td>
                 </tr>
@@ -112,7 +160,10 @@ async function refreshWatchlist() {
 
 function updateMarketTicker() {
     const ticker = document.getElementById('market-ticker');
-    const keySymbols = ['SPY', 'QQQ', 'AAPL', 'TSLA', 'NVDA'];
+    const keySymbols = activeMarket === 'MY'
+        ? ['1155.KL', '1295.KL', '1023.KL', '5347.KL', '5183.KL']
+        : ['SPY', 'QQQ', 'AAPL', 'TSLA', 'NVDA'];
+    const currency = activeMarket === 'MY' ? 'RM' : '$';
     let html = '';
 
     keySymbols.forEach(sym => {
@@ -121,9 +172,10 @@ function updateMarketTicker() {
             const chg = q.percent_change || 0;
             const color = chg >= 0 ? 'var(--green)' : 'var(--red)';
             const sign = chg >= 0 ? '+' : '';
+            const name = getStockName(sym);
             html += `<span class="ticker-item">
-                <span class="t-sym">${sym}</span>
-                <span class="t-price">$${q.current_price.toFixed(2)}</span>
+                <span class="t-sym">${name}</span>
+                <span class="t-price">${currency}${q.current_price.toFixed(2)}</span>
                 <span class="t-chg" style="color:${color}">${sign}${chg.toFixed(2)}%</span>
             </span>`;
         }
@@ -138,9 +190,11 @@ async function selectStock(symbol) {
 
     // Update header
     const q = watchlistData[symbol];
-    document.getElementById('active-symbol').textContent = symbol;
+    const displayName = getStockName(symbol);
+    const currency = activeMarket === 'MY' ? 'RM' : '$';
+    document.getElementById('active-symbol').textContent = activeMarket === 'MY' ? `${displayName} (${symbol})` : symbol;
     if (q) {
-        document.getElementById('active-price').textContent = `$${q.current_price.toFixed(2)}`;
+        document.getElementById('active-price').textContent = `${currency}${q.current_price.toFixed(2)}`;
         const chg = q.percent_change || 0;
         const sign = chg >= 0 ? '+' : '';
         document.getElementById('active-change').textContent = `${sign}${chg.toFixed(2)}%`;
@@ -424,7 +478,7 @@ async function loadSectorHeatmap() {
     document.getElementById('sector-heatmap').innerHTML = '';
 
     try {
-        const res = await fetch('/api/sectors');
+        const res = await fetch(`/api/sectors?market=${activeMarket}`);
         const data = await res.json();
         document.getElementById('sector-loading').classList.add('hidden');
 
@@ -465,19 +519,28 @@ async function loadMarketOverview() {
     document.getElementById('market-overview').innerHTML = '';
 
     try {
-        const res = await fetch('/api/market-overview');
+        const res = await fetch(`/api/market-overview?market=${activeMarket}`);
         const data = await res.json();
         document.getElementById('overview-loading').classList.add('hidden');
 
         if (data.error) throw new Error(data.error);
 
         const grid = document.getElementById('market-overview');
+        const currency = activeMarket === 'MY' ? 'RM' : '$';
         const labels = {
+            // US
             SPY: 'S&P 500', QQQ: 'NASDAQ', DIA: 'DOW 30', IWM: 'Russell 2K',
             VXX: 'VIX', GLD: 'Gold', USO: 'Oil', SLV: 'Silver',
             'BTC-USD': 'Bitcoin', 'ETH-USD': 'Ethereum',
             TLT: '20Y Bond', SHY: '1-3Y Bond',
             XLK: 'Tech', XLF: 'Finance', XLE: 'Energy', XLV: 'Health',
+            // MY
+            '^KLSE': 'KLCI Index',
+            '1155.KL': 'Maybank', '1295.KL': 'Public Bank', '1023.KL': 'CIMB',
+            '5183.KL': 'PetChem', '5235.KL': 'Petronas Gas',
+            '6947.KL': 'CelcomDigi', '6888.KL': 'Axiata',
+            '5285.KL': 'Sime Darby P', '2445.KL': 'KL Kepong',
+            '5347.KL': 'Tenaga', '5225.KL': 'IHH', '8869.KL': 'Press Metal',
         };
 
         for (const [category, quotes] of Object.entries(data.overview)) {
@@ -486,12 +549,13 @@ async function loadMarketOverview() {
                 const chg = q.percent_change || 0;
                 const color = chg >= 0 ? 'var(--green)' : 'var(--red)';
                 const sign = chg >= 0 ? '+' : '';
-                const label = labels[q.symbol] || q.symbol;
+                const label = labels[q.symbol] || getStockName(q.symbol);
+                const cur = (q.symbol.includes('.KL') || q.symbol.startsWith('^KL')) ? 'RM' : '$';
 
                 grid.innerHTML += `
                     <div class="market-card" onclick="selectStock('${q.symbol}')">
                         <div class="m-sym">${label}</div>
-                        <div class="m-price">$${q.current_price.toFixed(2)}</div>
+                        <div class="m-price">${cur}${q.current_price.toFixed(2)}</div>
                         <div class="m-chg" style="color:${color}">${sign}${chg.toFixed(2)}%</div>
                     </div>
                 `;

@@ -42,7 +42,23 @@ body {
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
 }
+.topbar-left { display: flex; align-items: center; gap: 12px; }
 .topbar h1 { font-size: 14px; font-weight: 700; color: var(--cyan); letter-spacing: 1px; }
+.market-switch { display: flex; gap: 2px; }
+.mkt-btn {
+    padding: 2px 8px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 10px;
+    font-family: inherit;
+    cursor: pointer;
+    border-radius: 3px;
+    font-weight: 700;
+    transition: all 0.15s;
+}
+.mkt-btn:hover { color: var(--text-dim); border-color: var(--text-dim); }
+.mkt-btn.active { background: var(--cyan); color: #000; border-color: var(--cyan); }
 .pro-badge {
     background: var(--orange);
     color: #000;

@@ -54,20 +54,24 @@ class PredictionResult:
         return "\n".join(lines)
 
 
-def combine_signals(signals: dict) -> tuple[str, float]:
+def combine_signals(signals: dict, weights: dict | None = None) -> tuple[str, float]:
     """Combine weighted signals into a final prediction.
 
     Args:
         signals: Dict mapping signal name to signal dict (with 'signal' and 'strength')
+        weights: Optional custom weights dict. Defaults to SIGNAL_WEIGHTS.
 
     Returns:
         Tuple of (action, confidence)
     """
+    if weights is None:
+        weights = SIGNAL_WEIGHTS
+
     weighted_score = 0
     total_weight = 0
 
     for name, signal_data in signals.items():
-        weight = SIGNAL_WEIGHTS.get(name, 0)
+        weight = weights.get(name, 0)
         if weight == 0:
             continue
 

@@ -1,5 +1,24 @@
 /* ===== Stock Prediction Dashboard - Frontend Logic ===== */
 
+// Market state
+let dashMarket = 'US';
+
+function switchDashMarket(market) {
+    dashMarket = market;
+    document.querySelectorAll('.market-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+
+    if (market === 'MY') {
+        document.getElementById('quick-picks-us').classList.add('hidden');
+        document.getElementById('quick-picks-my').classList.remove('hidden');
+        document.getElementById('symbol-input').placeholder = 'Enter Bursa code (e.g., 1155.KL for Maybank)';
+    } else {
+        document.getElementById('quick-picks-us').classList.remove('hidden');
+        document.getElementById('quick-picks-my').classList.add('hidden');
+        document.getElementById('symbol-input').placeholder = 'Enter stock symbol (e.g., TSLA, AAPL, NVDA)';
+    }
+}
+
 // Chart instances (for cleanup)
 let priceChart, rsiChart, macdChart, volumeChart;
 let signalsRadar, weightsDoughnut;
@@ -414,12 +433,12 @@ async function loadSectors() {
     hide('sector-heatmap');
 
     try {
-        const res = await fetch('/api/sectors');
+        const res = await fetch(`/api/sectors?market=${dashMarket}`);
         const data = await res.json();
         if (data.error) throw new Error(data.error);
 
         hide('sector-loading');
-        renderSectors(data.sectors);
+        renderSectors(data.sectors, data.market);
         show('sector-heatmap');
     } catch (err) {
         hide('sector-loading');

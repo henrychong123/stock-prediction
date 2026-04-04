@@ -12,6 +12,10 @@
     <header class="topbar">
         <div class="topbar-left">
             <h1>STOCKPRED <span class="pro-badge">PRO</span></h1>
+            <div class="market-switch">
+                <button class="mkt-btn active" onclick="switchMarket('US')">US</button>
+                <button class="mkt-btn" onclick="switchMarket('MY')">MY</button>
+            </div>
         </div>
         <div class="topbar-center" id="market-ticker"></div>
         <div class="topbar-right">
