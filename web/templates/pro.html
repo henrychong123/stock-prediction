@@ -122,34 +122,50 @@
             <div id="pred-reasons" class="pred-reasons"></div>
         </aside>
 
-        <!-- BOTTOM LEFT: SECTOR HEATMAP -->
+        <!-- BOTTOM LEFT: SECTOR HEATMAP + FEAR/GREED -->
         <section class="panel panel-sectors">
             <div class="panel-header">
-                <h2>Sector Heatmap</h2>
-                <button class="btn-sm" onclick="loadSectorHeatmap()">Load</button>
+                <h2>Sectors / F&G</h2>
+                <div>
+                    <button class="btn-sm" onclick="loadSectorHeatmap()">Sectors</button>
+                    <button class="btn-sm" onclick="loadFearGreed()">F&G</button>
+                </div>
             </div>
-            <div id="sector-loading" class="mini-loading hidden">Loading sectors...</div>
+            <div id="sector-loading" class="mini-loading hidden">Loading...</div>
+            <div id="fear-greed-display" class="hidden"></div>
             <div id="sector-heatmap" class="sector-heatmap"></div>
         </section>
 
-        <!-- BOTTOM CENTER: MARKET OVERVIEW -->
+        <!-- BOTTOM CENTER: MARKET OVERVIEW + TOOLS -->
         <section class="panel panel-overview">
             <div class="panel-header">
-                <h2>Market Overview</h2>
-                <button class="btn-sm" onclick="loadMarketOverview()">Refresh</button>
+                <h2>Market Tools</h2>
+                <div>
+                    <button class="btn-sm" onclick="loadMarketOverview()">Overview</button>
+                    <button class="btn-sm" onclick="runBacktest()">Backtest</button>
+                    <button class="btn-sm" onclick="loadCorrelations()">Corr</button>
+                </div>
             </div>
             <div id="overview-loading" class="mini-loading hidden">Loading...</div>
             <div id="market-overview" class="market-grid"></div>
+            <div id="backtest-display" class="hidden"></div>
+            <div id="correlation-display" class="hidden"></div>
         </section>
 
-        <!-- BOTTOM RIGHT: LIVE NEWS FEED -->
+        <!-- BOTTOM RIGHT: LIVE NEWS + ALERTS + PORTFOLIO -->
         <section class="panel panel-news">
             <div class="panel-header">
-                <h2>Live News</h2>
-                <button class="btn-sm" onclick="loadLiveNews()">Fetch</button>
+                <h2>News / Alerts</h2>
+                <div>
+                    <button class="btn-sm" onclick="loadLiveNews()">News</button>
+                    <button class="btn-sm" onclick="loadAlerts()">Alerts</button>
+                    <button class="btn-sm" onclick="loadPortfolio()">Portfolio</button>
+                </div>
             </div>
             <div id="news-loading" class="mini-loading hidden">Fetching...</div>
             <div id="news-feed" class="news-feed"></div>
+            <div id="alerts-display" class="hidden"></div>
+            <div id="portfolio-display" class="hidden"></div>
         </section>
 
     </div>

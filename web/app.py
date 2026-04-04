@@ -400,6 +400,175 @@ def api_geopolitical():
         return jsonify({"error": str(e)}), 500
 
 
+# ===== BACKTESTING =====
+
+@app.route("/api/backtest/<symbol>")
+def api_backtest(symbol):
+    """Run backtest for a symbol."""
+    from src.analysis.backtester import backtest_technical
+
+    period = request.args.get("period", "1y")
+    hold_days = int(request.args.get("hold_days", 5))
+    try:
+        result = backtest_technical(symbol.upper(), period=period, hold_days=hold_days)
+        return jsonify(result.summary() | {"trades": result.trades})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ===== PORTFOLIO =====
+
+@app.route("/api/portfolio/summary")
+def api_portfolio_summary():
+    """Get portfolio summary with holdings and P&L."""
+    from src.analysis.portfolio import get_portfolio_summary
+
+    name = request.args.get("name", "default")
+    try:
+        return jsonify(get_portfolio_summary(name))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/portfolio/trade", methods=["POST"])
+def api_portfolio_trade():
+    """Execute a virtual trade."""
+    from src.analysis.portfolio import execute_trade
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No JSON body"}), 400
+
+    try:
+        result = execute_trade(
+            portfolio_name=data.get("portfolio", "default"),
+            symbol=data.get("symbol", ""),
+            action=data.get("action", "BUY"),
+            quantity=float(data.get("quantity", 0)),
+            price=float(data.get("price", 0)),
+            signal_action=data.get("signal_action", ""),
+            signal_confidence=float(data.get("signal_confidence", 0)),
+            notes=data.get("notes", ""),
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/portfolio/trades")
+def api_portfolio_trades():
+    """Get trade history."""
+    from src.analysis.portfolio import get_trade_history
+
+    name = request.args.get("name", "default")
+    try:
+        return jsonify({"trades": get_trade_history(name)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ===== ALERTS =====
+
+@app.route("/api/alerts")
+def api_alerts_list():
+    """Get all alerts."""
+    from src.analysis.alerts import get_alerts
+
+    active_only = request.args.get("active", "true").lower() == "true"
+    try:
+        return jsonify({"alerts": get_alerts(active_only)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/alerts/create", methods=["POST"])
+def api_alerts_create():
+    """Create a new alert."""
+    from src.analysis.alerts import create_alert
+
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No JSON body"}), 400
+
+    try:
+        result = create_alert(
+            symbol=data.get("symbol", ""),
+            alert_type=data.get("alert_type", "price"),
+            condition=data.get("condition", "above"),
+            threshold=float(data.get("threshold", 0)),
+            message=data.get("message", ""),
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/alerts/check")
+def api_alerts_check():
+    """Check all active alerts against current data."""
+    from src.analysis.alerts import check_alerts
+
+    try:
+        triggered = check_alerts()
+        return jsonify({"triggered": triggered, "count": len(triggered)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/alerts/<int:alert_id>", methods=["DELETE"])
+def api_alerts_delete(alert_id):
+    from src.analysis.alerts import delete_alert
+    try:
+        delete_alert(alert_id)
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ===== MARKET INDICATORS =====
+
+@app.route("/api/fear-greed")
+def api_fear_greed():
+    """Get Fear & Greed Index."""
+    from src.analysis.market_indicators import calculate_fear_greed
+
+    market = request.args.get("market", "US").upper()
+    try:
+        return jsonify(calculate_fear_greed(market))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/correlations")
+def api_correlations():
+    """Get correlation matrix for given symbols."""
+    from src.analysis.market_indicators import calculate_correlations
+
+    symbols = request.args.get("symbols", "SPY,QQQ,AAPL,TSLA,GLD,TLT").split(",")
+    symbols = [s.strip().upper() for s in symbols if s.strip()]
+    period = request.args.get("period", "6mo")
+    try:
+        return jsonify(calculate_correlations(symbols, period))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/earnings")
+def api_earnings():
+    """Get upcoming earnings calendar."""
+    from src.analysis.market_indicators import get_earnings_calendar
+
+    symbols = request.args.get("symbols", "").split(",")
+    symbols = [s.strip().upper() for s in symbols if s.strip()]
+    if not symbols:
+        from config.settings import DEFAULT_SYMBOLS
+        symbols = DEFAULT_SYMBOLS
+    try:
+        return jsonify({"earnings": get_earnings_calendar(symbols)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ===== PREDICTION HISTORY & TRENDS =====
 
 @app.route("/api/predictions/history")
