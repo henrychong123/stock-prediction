@@ -160,11 +160,25 @@ def predict(symbol: str) -> PredictionResult:
     # Combine signals
     action, confidence = combine_signals(signals)
 
+    # Compute directional score for DB storage
+    score = 0
+    for name, sig in signals.items():
+        w = SIGNAL_WEIGHTS.get(name, 0)
+        s = sig.get("strength", 0.5)
+        score += ((s - 0.5) * 2) * w
+
     # Collect all reasons
     all_reasons = []
     for name, sig in signals.items():
         for reason in sig.get("reasons", [])[:2]:
             all_reasons.append(f"[{name}] {reason}")
+
+    # Save to database
+    try:
+        from src.database import save_prediction
+        save_prediction(symbol, action, confidence, current_price, score, signals, all_reasons)
+    except Exception:
+        pass  # Don't let DB errors break predictions
 
     return PredictionResult(
         symbol=symbol,
