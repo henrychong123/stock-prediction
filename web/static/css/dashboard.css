@@ -2060,6 +2060,40 @@ tbody tr:hover { background: var(--bg-card-hover); }
     }
 }
 
+/* ===== HOME SUB-TABS ===== */
+.home-sub-tabs { display: flex; gap: 4px; }
+.home-sub-tab {
+    padding: 5px 14px; font-size: 0.78rem; border-radius: 6px;
+    background: var(--bg-input); color: var(--text-secondary); border: 1px solid var(--border);
+    cursor: pointer; font-weight: 500; transition: all 0.2s;
+}
+.home-sub-tab.active { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+.home-sub-tab:hover:not(.active) { background: var(--bg-card-hover); }
+.home-section.hidden { display: none; }
+
+.home-catalyst-row {
+    display: flex; gap: 8px; align-items: center; padding: 4px 0;
+    font-size: 0.82rem; border-bottom: 1px solid var(--border-light);
+}
+.home-action-chip {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-size: 0.72rem; font-weight: 600; margin: 2px;
+}
+
+/* ===== STOCKS VIEW TOGGLE ===== */
+.stocks-view-btn {
+    padding: 6px 16px; font-size: 0.82rem; border-radius: 6px;
+    background: var(--bg-input); color: var(--text-secondary); border: 1px solid var(--border);
+    cursor: pointer; font-weight: 500; transition: all 0.2s;
+}
+.stocks-view-btn.active { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+.stocks-view-btn:hover:not(.active) { background: var(--bg-card-hover); }
+
+@media (max-width: 768px) {
+    #home-tab [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+    .home-sub-tabs { flex-wrap: wrap; }
+}
+
 .btn-sm {
     padding: 6px 14px; font-size: 0.78rem; border-radius: 6px;
     background: var(--accent-blue); color: #fff; border: none;

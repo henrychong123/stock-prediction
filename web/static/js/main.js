@@ -37,29 +37,42 @@
         panel.setAttribute('role', 'tabpanel');
     });
 
-    // ── Lazy Tab Loading ─────────────────────────────────────────────────────
-    const loaded = { news: false, trends: false, bursa: false };
+    // ── Reparent old content into new tab wrappers ─────────────────────────
+    function reparent(sourceId, targetId) {
+        const source = App.$(sourceId);
+        const target = App.$(targetId);
+        if (source && target) {
+            while (source.firstChild) target.appendChild(source.firstChild);
+        }
+    }
 
-    document.querySelector('[data-tab="newshub-tab"]').addEventListener('click', () => {
-        App.tabs.news.startPoller();
-        if (!loaded.news) { loaded.news = true; App.tabs.news.loadIndustryAnalysis(); }
+    // Move old tab content into new wrapper tabs
+    reparent('stock-tab', 'stocks-analysis-section');
+    reparent('bursa-tab', 'stocks-market-section');
+    reparent('sector-tab', 'home-section-sectors');
+    reparent('report-tab', 'home-section-report');
+    reparent('trends-tab', 'home-section-trends');
+    reparent('model-tab', 'settings-tab');
+
+    // ── Lazy Tab Loading (5 new tabs) ───────────────────────────────────────
+    const loaded = { home: false, stocks: false, news: false, catalyst: false, settings: false };
+
+    document.querySelector('[data-tab="home-tab"]').addEventListener('click', () => {
+        if (App.tabs.home) App.tabs.home.activate();
     });
 
-    document.querySelector('[data-tab="trends-tab"]').addEventListener('click', () => {
-        if (!loaded.trends) { loaded.trends = true; App.tabs.trends.loadHistory(); }
-    });
-
-    document.querySelector('[data-tab="report-tab"]').addEventListener('click', () => {
-        App.tabs.report.load();
-    });
-
-    document.querySelector('[data-tab="model-tab"]').addEventListener('click', () => {
-        App.tabs.model.load();
-    });
-
-    document.querySelector('[data-tab="bursa-tab"]').addEventListener('click', () => {
-        App.tabs.bursa.loadWatchlist();
-        if (!loaded.bursa) { loaded.bursa = true; App.tabs.bursa.loadMarket(); }
+    document.querySelector('[data-tab="stocks-tab"]').addEventListener('click', () => {
+        if (!loaded.stocks && App.tabs.stocks) {
+            loaded.stocks = true;
+            App.tabs.stocks.initialize();
+        }
+        // Set up view toggle buttons
+        document.querySelectorAll('.stocks-view-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (App.tabs.stocks) App.tabs.stocks.switchView(btn.dataset.view);
+                document.querySelectorAll('.stocks-view-btn').forEach(b => b.classList.toggle('active', b === btn));
+            });
+        });
     });
 
     document.querySelector('[data-tab="catalyst-tab"]').addEventListener('click', () => {
@@ -67,6 +80,18 @@
             App.tabs['catalyst-tab'].activate();
         }
     });
+
+    document.querySelector('[data-tab="newshub-tab"]').addEventListener('click', () => {
+        App.tabs.news.startPoller();
+        if (!loaded.news) { loaded.news = true; App.tabs.news.loadIndustryAnalysis(); }
+    });
+
+    document.querySelector('[data-tab="settings-tab"]').addEventListener('click', () => {
+        if (App.tabs.settings) App.tabs.settings.load();
+    });
+
+    // Trigger Home tab on initial load
+    if (App.tabs.home) App.tabs.home.activate();
 
     // ── Event Delegation (replaces all inline onclick handlers) ──────────────
     document.body.addEventListener('click', e => {

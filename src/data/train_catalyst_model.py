@@ -216,13 +216,26 @@ def build_training_data() -> pd.DataFrame:
     return df
 
 
-def _augment_with_historical_price_reactions(df: pd.DataFrame) -> pd.DataFrame:
-    """Augment the small news dataset with historical samples.
+def _augment_with_historical_price_reactions(df: pd.DataFrame, real_count: int = 0) -> pd.DataFrame:
+    """Augment the news dataset with historical samples.
 
-    Uses daily_features table (which has actual news sentiment) joined with
-    next-day price changes. Also adds random samples with randomized sentiment
-    to teach the model what baseline noise looks like.
+    Scales augmentation based on how much real data we have:
+    - < 500 real samples: heavy augmentation (50K sig moves + 20K noise)
+    - 500-2000 real: medium (20K sig + 10K noise)
+    - 2000-5000 real: light (10K sig + 5K noise)
+    - > 5000 real: minimal (5K sig + 2K noise, real data dominates)
     """
+    if real_count < 500:
+        sig_limit, noise_limit = 50000, 20000
+    elif real_count < 2000:
+        sig_limit, noise_limit = 20000, 10000
+    elif real_count < 5000:
+        sig_limit, noise_limit = 10000, 5000
+    else:
+        sig_limit, noise_limit = 5000, 2000
+
+    log.info(f"Augmentation scale: {sig_limit} sig moves + {noise_limit} noise (based on {real_count} real samples)")
+
     conn = get_connection()
 
     # Method 1: Use actual daily_features sentiment where available
@@ -239,21 +252,21 @@ def _augment_with_historical_price_reactions(df: pd.DataFrame) -> pd.DataFrame:
 
     # Method 2: All significant price moves (>1.5%) — these likely had news catalysts
     sig_df = pd.read_sql_query(
-        """SELECT symbol, date, close, rsi, vix_close, market_index_close,
+        f"""SELECT symbol, date, close, rsi, vix_close, market_index_close,
                   atr, volatility, daily_return, volume, price_change_1d
            FROM training_data
            WHERE price_change_1d IS NOT NULL AND ABS(price_change_1d) > 1.5
-           ORDER BY RANDOM() LIMIT 50000""",
+           ORDER BY RANDOM() LIMIT {sig_limit}""",
         conn
     )
 
     # Method 3: Random baseline samples (teaches model what noise looks like)
     rand_df = pd.read_sql_query(
-        """SELECT symbol, date, close, rsi, vix_close, market_index_close,
+        f"""SELECT symbol, date, close, rsi, vix_close, market_index_close,
                   atr, volatility, daily_return, volume, price_change_1d
            FROM training_data
            WHERE price_change_1d IS NOT NULL AND ABS(price_change_1d) <= 1.5
-           ORDER BY RANDOM() LIMIT 20000""",
+           ORDER BY RANDOM() LIMIT {noise_limit}""",
         conn
     )
     conn.close()
@@ -483,11 +496,12 @@ def run():
     # Build training data from headlines
     df = build_training_data()
 
-    if len(df) < 20:
-        log.warning(f"Only {len(df)} samples from headlines. Augmenting with historical price reactions.")
+    real_count = len(df)
+    log.info(f"Real headline→price samples: {real_count}")
 
-    # Augment with historical price reactions
-    df = _augment_with_historical_price_reactions(df)
+    # Augment — scale down augmentation as real data grows
+    # Goal: real data should be at least 10% of total training set
+    df = _augment_with_historical_price_reactions(df, real_count=real_count)
 
     if len(df) < 50:
         log.error(f"Not enough data to train ({len(df)} samples). Collect more news first.")

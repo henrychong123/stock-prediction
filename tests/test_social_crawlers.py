@@ -153,10 +153,12 @@ class TestSocialCollector:
 
     @patch("src.data.social_collector.collect_rss_news", return_value=5)
     @patch("src.data.social_collector.collect_yahoo_news", return_value=10)
+    @patch("src.data.social_collector.collect_bursa_news", return_value=8)
     @patch("src.data.social_collector.collect_youtube", return_value=0)
-    def test_run(self, mock_yt, mock_yahoo, mock_rss):
+    def test_run(self, mock_yt, mock_bursa, mock_yahoo, mock_rss):
         from src.data.social_collector import run
         total = run(skip_youtube=True, skip_sentiment=True)
-        assert total == 15
+        assert total == 23  # 5 + 10 + 8 + 0
         mock_rss.assert_called_once()
         mock_yahoo.assert_called_once()
+        mock_bursa.assert_called_once()

@@ -160,15 +160,15 @@
 
     function goAnalyze() {
         const symbol = App.$('trend-symbol-input').value.trim();
-        // Switch to Analysis tab
+        // Switch to Stocks tab
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        document.querySelector('[data-tab="stock-tab"]').classList.add('active');
-        App.$('stock-tab').classList.add('active');
-        // Update aria
+        const stocksBtn = document.querySelector('[data-tab="stocks-tab"]');
+        if (stocksBtn) stocksBtn.classList.add('active');
+        App.$('stocks-tab')?.classList.add('active');
         document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.classList.contains('active')));
         // Pre-fill and analyze
-        App.$('symbol-input').value = symbol;
+        if (App.$('symbol-input')) App.$('symbol-input').value = symbol;
         if (symbol.endsWith('.KL')) App.tabs.analysis.switchMarket('MY');
         else App.tabs.analysis.switchMarket('US');
         App.tabs.analysis.analyze();

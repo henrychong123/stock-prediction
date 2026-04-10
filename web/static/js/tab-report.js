@@ -125,7 +125,7 @@
 
             // Click to analyze
             tr.addEventListener('click', () => {
-                document.querySelector('[data-tab="stock-tab"]').click();
+                document.querySelector('[data-tab="stocks-tab"]')?.click();
                 App.tabs.analysis.switchMarket('MY');
                 App.tabs.analysis.quickAnalyze(r.symbol);
             });

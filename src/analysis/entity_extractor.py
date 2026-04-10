@@ -129,6 +129,61 @@ MANUAL_ALIASES = {
     "kuala lumpur kepong": "2445.KL",
     "felda": "5222.KL", "fgv": "5222.KL",
     "ppb group": "4065.KL",
+    # Sector keywords → sector leader (when no specific company named)
+    "plantation sector": "5285.KL", "planters": "5285.KL", "planter": "5285.KL",
+    "plantation stocks": "5285.KL",
+    "property sector": "5398.KL", "property developer": "5398.KL",  # Gamuda
+    "property stocks": "5398.KL", "property market malaysia": "5398.KL",
+    "glove sector": "7113.KL", "glove maker": "7113.KL", "rubber glove": "7113.KL",
+    "glove stocks": "7113.KL",
+    "semiconductor malaysia": "5136.KL",  # Unisem
+    "banking sector malaysia": "1155.KL", "malaysian banks": "1155.KL",
+    "oil and gas malaysia": "5183.KL",
+    "telco sector": "6947.KL", "telco stocks": "6947.KL",
+    # Additional company names
+    "shell": "4324.KL",  # Shell Refining (Malaysia)
+    "united plantations": "2089.KL",
+    "johor plantations": "2100.KL",
+    "hap seng consolidated": "3034.KL",
+    "alliance bank": "2488.KL",
+    "padini": "7052.KL",
+    "kossan": "7153.KL", "kossan rubber": "7153.KL",
+    "inari": "0166.KL", "inari amertron": "0166.KL",
+    "mi technovation": "0078.KL",
+    "globetronics": "7022.KL",
+    "frontken": "0072.KL",
+    "comfort gloves": "0082.KL", "comfort glove": "0082.KL",
+    "karex": "5247.KL",
+    "duopharma": "7148.KL", "duopharma biotech": "7148.KL",
+    "mega first": "3069.KL",
+    "scicom": "0099.KL",
+    "revenue group": "0200.KL",
+    "opcom": "0035.KL",
+    "datasonic": "5216.KL",
+    "my eg": "0138.KL", "myeg": "0138.KL",
+    "destini": "7252.KL",
+    "serba dinamik": "5765.KL",
+    "velesto": "5243.KL", "velesto energy": "5243.KL",
+    "bumi armada": "5210.KL",
+    "westports": "5246.KL",
+    "mmc corp": "2194.KL", "mmc corporation": "2194.KL",
+    "ranhill": "5272.KL", "ranhill utilities": "5272.KL",
+    "uchi technologies": "7100.KL", "uchi tech": "7100.KL",
+    "vitrox": "0097.KL",
+    "pentamaster": "7160.KL",
+    "kelington": "0151.KL",
+    "mi equipment": "5286.KL",
+    # General market keywords → Bursa Malaysia (5185.KL)
+    "bursa malaysia": "5185.KL", "bursa": "5185.KL",
+    "klci": "5185.KL", "fbm klci": "5185.KL", "fbm emas": "5185.KL",
+    "malaysian stocks": "5185.KL", "malaysia stock market": "5185.KL",
+    "malaysia shares": "5185.KL", "klse": "5185.KL",
+    # Commodity keywords → most exposed MY stock
+    "oil price": "5183.KL", "crude oil": "5183.KL", "fuel price": "5183.KL",
+    "gold price": "8869.KL",  # Press Metal (metals)
+    "commodity price": "8869.KL",
+    "tin price": "8869.KL",
+    "natural gas malaysia": "6033.KL",  # Petronas Gas
 }
 
 

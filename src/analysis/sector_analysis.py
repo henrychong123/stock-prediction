@@ -213,7 +213,7 @@ def analyze_sector_etf(sector_name: str, market: str = "US") -> SectorResult:
         "market_momentum": momentum,
     }
 
-    action, confidence = combine_signals(signals, weights)
+    action, confidence, *_extra = combine_signals(signals, weights)
 
     # Compute directional score
     score = 0

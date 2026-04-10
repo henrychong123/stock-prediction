@@ -24,7 +24,7 @@ def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA busy_timeout=5000")
+    conn.execute("PRAGMA busy_timeout=10000")
     return conn
 
 
@@ -225,6 +225,22 @@ def init_db():
             measured_at     TEXT NOT NULL DEFAULT (datetime('now'))
         );
 
+        CREATE TABLE IF NOT EXISTS stock_knowledge (
+            symbol          TEXT PRIMARY KEY,
+            name            TEXT NOT NULL,
+            market          TEXT DEFAULT 'MY',
+            business_desc   TEXT,
+            parent_company  TEXT,
+            subsidiaries    TEXT,
+            related_stocks  TEXT,
+            suppliers       TEXT,
+            customers       TEXT,
+            commodity_exposure TEXT,
+            sector          TEXT,
+            knowledge_json  TEXT,
+            updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+
         CREATE INDEX IF NOT EXISTS idx_insider_symbol ON insider_history(symbol);
         CREATE INDEX IF NOT EXISTS idx_insider_date ON insider_history(filing_date);
         CREATE INDEX IF NOT EXISTS idx_analyst_symbol ON analyst_history(symbol);
@@ -385,6 +401,39 @@ def get_news_latest_fetched() -> str | None:
     ).fetchone()
     conn.close()
     return row["fetched_at"] if row else None
+
+
+def update_news_article_text(news_id: int, article_text: str):
+    """Update the summary field with full article text."""
+    import time
+    for attempt in range(3):
+        try:
+            conn = get_connection()
+            conn.execute("UPDATE news SET summary = ? WHERE id = ?", (article_text[:5000], news_id))
+            conn.commit()
+            conn.close()
+            return
+        except Exception:
+            time.sleep(2)
+    # Final attempt without retry
+    conn = get_connection()
+    conn.execute("UPDATE news SET summary = ? WHERE id = ?", (article_text[:5000], news_id))
+    conn.commit()
+    conn.close()
+
+
+def get_news_without_article_text(limit: int = 50) -> list[dict]:
+    """Get recent news articles that have a URL but no article text."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT id, headline, url FROM news
+           WHERE url IS NOT NULL AND url != ''
+           AND (summary IS NULL OR summary = '' OR LENGTH(summary) < 100)
+           ORDER BY fetched_at DESC LIMIT ?""",
+        (limit,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
 
 
 # ── News tracker state (tracks last API poll time per source) ─────────────────
@@ -908,6 +957,83 @@ def get_earnings_for_training(symbols: list[str] = None) -> list[dict]:
         rows = conn.execute("SELECT * FROM earnings_history ORDER BY symbol, date").fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+# ===== STOCK KNOWLEDGE =====
+
+def save_stock_knowledge(data: dict):
+    """Save or update stock knowledge entry."""
+    conn = get_connection()
+    conn.execute(
+        """INSERT OR REPLACE INTO stock_knowledge
+           (symbol, name, market, business_desc, parent_company, subsidiaries,
+            related_stocks, suppliers, customers, commodity_exposure, sector, knowledge_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (data.get("symbol"), data.get("name"), data.get("market", "MY"),
+         data.get("business_desc", ""), data.get("parent_company", ""),
+         json.dumps(data.get("subsidiaries", [])),
+         json.dumps(data.get("related_stocks", [])),
+         json.dumps(data.get("suppliers", [])),
+         json.dumps(data.get("customers", [])),
+         json.dumps(data.get("commodity_exposure", [])),
+         data.get("sector", ""),
+         json.dumps(data.get("raw_knowledge", {})))
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_stock_knowledge(symbol: str) -> dict | None:
+    """Get knowledge for a specific stock."""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT * FROM stock_knowledge WHERE symbol = ?", (symbol,)
+    ).fetchone()
+    conn.close()
+    if not row:
+        return None
+    r = dict(row)
+    for field in ["subsidiaries", "related_stocks", "suppliers", "customers", "commodity_exposure"]:
+        try:
+            r[field] = json.loads(r[field])
+        except (json.JSONDecodeError, TypeError):
+            r[field] = []
+    try:
+        r["knowledge_json"] = json.loads(r["knowledge_json"])
+    except (json.JSONDecodeError, TypeError):
+        r["knowledge_json"] = {}
+    return r
+
+
+def get_related_stocks(symbol: str) -> list[str]:
+    """Get all related stock symbols for a given stock."""
+    knowledge = get_stock_knowledge(symbol)
+    if not knowledge:
+        return []
+    related = set()
+    for field in ["related_stocks", "subsidiaries", "suppliers", "customers"]:
+        for s in knowledge.get(field, []):
+            if isinstance(s, str) and s.endswith(".KL"):
+                related.add(s)
+    related.discard(symbol)
+    return list(related)
+
+
+def get_all_stock_knowledge() -> list[dict]:
+    """Get knowledge for all stocks."""
+    conn = get_connection()
+    rows = conn.execute("SELECT * FROM stock_knowledge ORDER BY symbol").fetchall()
+    conn.close()
+    results = []
+    for row in rows:
+        r = dict(row)
+        for field in ["subsidiaries", "related_stocks", "suppliers", "customers", "commodity_exposure"]:
+            try:
+                r[field] = json.loads(r[field])
+            except (json.JSONDecodeError, TypeError):
+                r[field] = []
+        results.append(r)
+    return results
 
 
 # ===== CATALYST ALERTS =====

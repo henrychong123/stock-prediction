@@ -1,6 +1,6 @@
 # StockSight — System Architecture
 
-> Auto-updated by Claude Code. Last updated: 2026-04-10
+> Auto-updated by Claude Code. Last updated: 2026-04-11
 
 ---
 
@@ -317,67 +317,56 @@ flowchart LR
 
 ---
 
-## 7. Dashboard: What Users See (8 Tabs)
+## 7. Dashboard: What Users See (5 Tabs)
 
 ```mermaid
 graph TB
-    subgraph "Tab 1: Analysis"
-        A1[Stock Search Bar]
-        A2[15 Technical Indicator Charts]
-        A3[5 Overlay Toggles<br/>EMA, VWAP, SAR, Fibonacci, Ichimoku]
-        A4[ML Prediction Badge<br/>BUY / HOLD / SELL]
-        A5[Weight Distribution<br/>Doughnut Chart]
-        A6[Earnings Report Table]
-        A7[Market Movers<br/>Influential Figures]
-        A8[Fundamentals Card<br/>P/E, P/B, EPS, ROE]
+    subgraph "Tab 1: Home"
+        subgraph "Overview (default)"
+            A1[Sector Heatmap Compact]
+            A2[Predictions Summary<br/>BUY/SELL/HOLD counts]
+            A3[Active Catalyst Alerts<br/>Top 5 stock picks]
+        end
+        subgraph "Sub-tabs"
+            A4[Sectors: 11 GICS heatmap + radar]
+            A5[Report: All stocks ranked with filters]
+            A6[Trends: Prediction history + charts]
+        end
     end
 
-    subgraph "Tab 2: Sectors"
-        B1[11 GICS Sector Heatmap]
-        B2[Ranked Scores]
+    subgraph "Tab 2: Stocks"
+        subgraph "Search & Analyse"
+            B1[Stock Search Bar]
+            B2[15 Technical Indicator Charts]
+            B3[ML Prediction Badge]
+            B4[Earnings + Fundamentals]
+        end
+        subgraph "Bursa Market"
+            B5[80 Stocks x 8 Industries]
+            B6[Live Quotes + Watchlist]
+            B7[Order Book]
+        end
     end
 
-    subgraph "Tab 3: News"
-        C1[News Intelligence Hub]
-        C2[FinBERT Sentiment Pies]
-        C3[AI Industry Classification]
-        C4[11 Platform Sources]
+    subgraph "Tab 3: Catalyst"
+        C1[US Stock Mentions<br/>Direct from headlines]
+        C2[Bursa Stock Mentions<br/>Direct from headlines]
+        C3[Knowledge Graph Cascade<br/>Related stocks auto-expanded]
+        C4[Detected Events: 11 types]
+        C5[Scan Now + History]
     end
 
-    subgraph "Tab 4: Trends"
-        D1[Prediction History per Stock]
-        D2[Sector Trends Over Time]
+    subgraph "Tab 4: News"
+        D1[News Intelligence Hub<br/>13 sources]
+        D2[FinBERT Sentiment]
+        D3[AI Industry Classification]
     end
 
-    subgraph "Tab 5: Report"
-        E1[All Stocks Ranked by Score]
-        E2[Filter: Action / Industry / Confidence]
-        E3[Batch Predict Trigger]
-    end
-
-    subgraph "Tab 6: Model"
-        F1[107 Features by Category]
-        F2[Accuracy: 56.3%]
-        F3[Feature Importance Chart]
-        F4[Signal Weights]
-        F5[Training Data Stats]
-    end
-
-    subgraph "Tab 7: Bursa"
-        G1[80 Stocks x 8 Industries]
-        G2[Live Quotes + Prediction Badges]
-        G3[Personal Watchlist]
-        G4[Order Book]
-        G5[Auto-Refresh Toggle]
-    end
-
-    subgraph "Tab 8: Catalyst"
-        H1[US Stock Mentions<br/>Direct from headlines]
-        H2[Bursa Stock Mentions<br/>Direct from headlines]
-        H3[Detected Events<br/>11 catalyst types]
-        H4[Top Stock Picks<br/>Score + Predicted Move]
-        H5[Scan Now Button]
-        H6[History]
+    subgraph "Tab 5: Settings"
+        E1[107 Features by Category]
+        E2[Model Accuracy: 56.3%]
+        E3[Signal Weights]
+        E4[Training Data Stats]
     end
 ```
 
@@ -420,7 +409,7 @@ gantt
 |-------|---------|------|----------|-------------|
 | **Main Direction** | 5-day UP/DOWN/FLAT | 1.4M rows, 107 features | **56.3%** | volatility, vix_high, market_index, oil_close |
 | **Main Magnitude** | 5-day % change | same | **MAE 2.81%** | same |
-| **Catalyst Direction** | 24h reaction to news | 70K samples, 16 features | **83.0%** | sentiment_positive, is_direct_mention, has_event |
-| **Catalyst Magnitude** | 24h % move | same | **MAE 2.01%** | same |
+| **Catalyst Direction** | 24h reaction to news | 101K samples, 16 features | **75.0%** | is_direct_mention, has_event, sentiment_positive |
+| **Catalyst Magnitude** | 24h % move | same | **MAE 1.17%** | same |
 | **FinBERT** | Headline sentiment | Pre-trained (ProsusAI) | ~90% | — |
 | **Ollama Phi-3** | Deep headline analysis | Pre-trained (Microsoft) | — | — |

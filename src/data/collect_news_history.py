@@ -180,15 +180,27 @@ def run(symbol: str = None, months: int = 12, skip_finbert: bool = False):
     if symbol:
         symbols = [symbol]
     else:
-        # Core stocks: Bursa + top US
         try:
-            from config.stock_universe import get_core_stocks
-            symbols = [s["symbol"] for s in get_core_stocks()]
+            from config.stock_universe import get_sp500, get_core_stocks
+            # Top 50 US stocks by relevance + all core stocks
+            sp500 = [s["symbol"] for s in get_sp500()]
+            core = [s["symbol"] for s in get_core_stocks()]
+            # Prioritize: mega-caps first, then core, then rest of S&P 500
+            mega_caps = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "TSLA", "META",
+                         "BRK.B", "JPM", "V", "MA", "UNH", "JNJ", "XOM", "PG",
+                         "HD", "AVGO", "COST", "MRK", "ABBV", "PEP", "KO",
+                         "NFLX", "CRM", "AMD", "INTC", "QCOM", "BA", "DIS",
+                         "GS", "MS", "C", "WFC", "PLTR", "UBER", "ABNB"]
+            seen = set()
+            symbols = []
+            for s in mega_caps + core + sp500:
+                if s not in seen and not s.endswith(".KL") and not s.startswith("^"):
+                    seen.add(s)
+                    symbols.append(s)
         except ImportError:
             symbols = ["TSLA", "AAPL", "NVDA", "GOOGL", "AMZN", "MSFT", "META"]
 
-    # Filter to US stocks only (Finnhub company_news is US-focused)
-    us_symbols = [s for s in symbols if not s.endswith(".KL") and not s.startswith("^")]
+    us_symbols = symbols
 
     total = len(us_symbols)
     log.info(f"Collecting {months}-month news history for {total} US stocks...")

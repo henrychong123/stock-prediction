@@ -8,7 +8,7 @@ This file gives Claude full context so sessions on any device start with a compl
 
 ## Last Updated
 
-**2026-04-08** — Session: Major data enhancement for ML model. Added 22+ new features (lagged indicators, treasury yields, DXY, sector ETF returns, cross-asset prices, Fear & Greed proxy, cross-asset correlations, insider buy ratio, analyst score). New data sources: insider trading (Finnhub), analyst consensus (Finnhub), historical news sentiment backfill (Finnhub + FinBERT). GDELT tone now backfilled per-stock via industry mapping. New collectors: collect_insider.py, collect_analyst.py, collect_news_history.py. New DB tables: insider_history, analyst_history. 8 new training_data columns for macro features. Predictor updated to compute all new features at inference time. 228 tests pass.
+**2026-04-11** — Session: Catalyst Alerts system (news-driven 24h stock predictions, 75% accuracy, 101K training samples). Entity extractor (219 aliases, 78% Bursa match rate). Stock knowledge graph (researched Bursa relationships: parent/subsidiary, supplier/customer, competitors, GLC links). Ollama Phi-3 Mini integration for headline analysis. Social crawlers: Yahoo Finance News, Benzinga, MarketWatch, CNBC, FMT, Malay Mail, i3investor, KLSE Screener (13 sources, 6,722 articles). Bursa news backfill (24 months, 6,003 articles via Google News). 10-year training data (1.4M rows). ML model 56.3% accuracy with 107 features (4 sentiment features now active). Dashboard restructured from 8 tabs to 5 tabs (Home, Stocks, Catalyst, News, Settings). Cloud deployment scripts ready (deploy/). 271 tests pass.
 
 ---
 
@@ -18,8 +18,8 @@ Multi-signal stock prediction dashboard that:
 1. Gathers signals from technical analysis (15+ indicators), news sentiment (FinBERT), social media (Reddit), geopolitical events (GDELT), influential figure monitoring, **earnings surprises** (Finnhub), **insider trading**, and **analyst consensus**
 2. Combines them with **AI-optimized weights** (via scipy differential evolution)
 3. Runs **XGBoost + LightGBM ensemble** ML model as a 7th signal (~107 features)
-4. **Catalyst Alerts**: scans news every 30 min, detects market-moving events, predicts next rising/falling stocks
-5. Serves a Flask web dashboard with 8 tabs: Analysis, Sectors, News, Trends, Report, Model, Bursa, Catalyst
+4. **Catalyst Alerts**: scans news every 30 min, detects market-moving events, predicts next rising/falling stocks with knowledge graph cascade
+5. Serves a Flask web dashboard with 5 tabs: Home, Stocks, Catalyst, News, Settings
 6. Supports US (S&P 500) + Bursa Malaysia markets
 7. Pre-computes predictions via batch jobs, serves from cache (~150ms)
 
@@ -29,19 +29,22 @@ Multi-signal stock prediction dashboard that:
 
 ```
 Flask web app (web/app.py)
-    ├── 8 JS modules (app.js, main.js, tab-*.js)
+    ├── 11 JS modules (app.js, main.js, tab-*.js)
+    ├── 5 tabs: Home, Stocks, Catalyst, News, Settings
     ├── Pre-computed predictions served from SQLite cache
     └── Background workers (scheduled):
             ├── price_tracker.py      (every 5 min)
             ├── news_tracker.py       (every 30 min)
+            ├── catalyst_scanner.py   (every 30 min)
+            ├── social_collector.py   (every 2 hours)
             ├── daily_collector.py    (daily 6 PM)
             └── batch_predict.py      (daily 6:30 PM)
 
 config/
     ├── settings.py            ← API keys, weights, BURSA_INDUSTRIES
     ├── stock_universe.py      ← S&P 500 + Bursa + indices (589 stocks)
-    └── industries.py          ← CANONICAL single source of truth for industry names,
-                                  icons, GDELT keywords, migration map
+    ├── industries.py          ← CANONICAL single source of truth for industry names
+    └── stock_knowledge.py     ← Bursa stock relationship graph (researched)
 
 src/data_sources/
     ├── stock_prices.py     ← yfinance + 15 technical indicators
@@ -52,11 +55,17 @@ src/data_sources/
     ├── earnings.py         ← Finnhub EPS surprise, beat rate, upcoming dates
     ├── insider.py          ← Finnhub insider transactions (buy/sell ratio)
     ├── analyst.py          ← Finnhub analyst consensus (recommendation trends)
+    ├── yahoo_news.py       ← Yahoo Finance News API (stock-specific, free)
+    ├── market_news_rss.py  ← Benzinga, MarketWatch, CNBC, FMT, Malay Mail RSS
+    ├── bursa_news.py       ← i3investor + KLSE Screener (Bursa-specific)
+    ├── youtube_sentiment.py ← YouTube Data API (optional, needs key)
     └── order_book.py       ← IB Gateway (L2) + yfinance fallback (L1)
 
 src/analysis/
     ├── predictor.py        ← signal combiner (7 signals), fast/full modes, cache-first
-    ├── catalyst.py         ← news catalyst detector + stock impact ranker (11 event types)
+    ├── catalyst.py         ← news catalyst detector + stock impact ranker (11 event types) + knowledge graph cascade
+    ├── entity_extractor.py ← stock mention detection (583 tickers, 694 names, 219 aliases)
+    ├── llm_analyzer.py     ← Ollama Phi-3 Mini wrapper for headline analysis
     ├── industry_classifier.py ← keyword + AI zero-shot + DB classification cache
     └── market_indicators.py   ← Fear & Greed index
 
@@ -66,7 +75,11 @@ src/data/
     ├── collect_earnings.py    ← historical EPS/revenue data from Finnhub
     ├── collect_insider.py     ← insider transaction history from Finnhub
     ├── collect_analyst.py     ← analyst recommendation history from Finnhub
-    ├── collect_news_history.py ← historical news sentiment backfill (Finnhub + FinBERT)
+    ├── collect_news_history.py ← historical US news sentiment backfill (Finnhub + FinBERT)
+    ├── collect_bursa_news_history.py ← 24-month Bursa news backfill (Google News + FinBERT)
+    ├── social_collector.py    ← multi-source news aggregator (13 platforms, every 2h)
+    ├── build_stock_knowledge.py ← Ollama-based stock relationship builder
+    ├── train_catalyst_model.py ← 24h news reaction model training
     ├── daily_collector.py     ← daily sentiment + macro features
     ├── batch_predict.py       ← batch predictions for all stocks
     ├── train_model.py         ← XGBoost + LightGBM training (~104 features)
@@ -101,6 +114,8 @@ tests/
     ├── test_insider.py           ← 5 tests (insider transactions + signal)
     ├── test_analyst.py           ← 6 tests (analyst consensus + signal)
     ├── test_catalyst.py          ← 15 tests (event detection, ranking, DB, API)
+    ├── test_entity_extractor.py  ← 16 tests (stock mention detection, aliases)
+    ├── test_social_crawlers.py   ← 12 tests (Yahoo News, RSS, YouTube, LLM, collector)
     └── test_industry_alignment.py ← 6 tests (guard against name drift)
 ```
 
@@ -110,24 +125,27 @@ tests/
 
 ```
 web/static/js/
-    ├── app.js           ← Core: App namespace, state, API wrapper, chart factory,
-    │                       toast, cache (TTL), network banner, skeleton helpers
-    ├── main.js          ← Tab router, event delegation, keyboard shortcuts, init
-    ├── tab-analysis.js  ← Analysis tab: prediction, 15 indicator charts, overlays,
-    │                       fundamentals, earnings report, market movers, progress steps,
-    │                       weight distribution doughnut chart
-    ├── tab-sectors.js   ← Sector heatmap with progress bar
-    ├── tab-news.js      ← News hub: industry cards, sentiment pies, AI classification
-    ├── tab-trends.js    ← Prediction history, trend charts, sector trends
-    ├── tab-report.js    ← Daily report: all stocks ranked, filters, batch trigger
-    ├── tab-model.js     ← Model info: accuracy metrics, feature importance chart,
-    │                       signal weights, feature categories table, training data stats
-    ├── tab-bursa.js     ← Bursa market: industry cards, detail panel, order book,
-    │                       stock modal, watchlist, prediction badges,
-    │                       auto-refresh toggle, progress steps
-    └── tab-catalyst.js  ← Catalyst alerts: event detection, stock picks table,
-                            scan trigger, history, 30-min auto-refresh
+    ├── app.js            ← Core: App namespace, state, API wrapper, chart factory
+    ├── main.js           ← 5-tab router, content reparenting, event delegation
+    ├── tab-home.js       ← Home tab: overview dashboard, sub-tabs (sectors/report/trends)
+    ├── tab-stocks.js     ← Stocks tab: wraps analysis + bursa, view toggle
+    ├── tab-analysis.js   ← Analysis: 15 indicator charts, ML prediction, earnings
+    ├── tab-bursa.js      ← Bursa market: industry cards, watchlist, order book
+    ├── tab-catalyst.js   ← Catalyst: US + Bursa picks, events, knowledge graph cascade
+    ├── tab-news.js       ← News hub: AI classification, sentiment pies
+    ├── tab-settings.js   ← Settings: wraps model info
+    ├── tab-model.js      ← Model info: 107 features, accuracy, weights
+    ├── tab-sectors.js    ← Sector heatmap (used by Home tab)
+    ├── tab-report.js     ← Daily report (used by Home tab)
+    └── tab-trends.js     ← Prediction trends (used by Home tab)
 ```
+
+**5 User-Facing Tabs:**
+- **Home** — landing page with overview + sub-tabs: Sectors, Report, Trends
+- **Stocks** — unified stock analysis with view toggle: Search & Analyse / Bursa Market
+- **Catalyst** — news-driven 24h stock picks (US + Bursa split)
+- **News** — news intelligence hub with AI classification
+- **Settings** — model info, signal weights, training stats
 
 **Key patterns:**
 - All inline `onclick` removed → `data-action` + event delegation in `main.js`
@@ -247,6 +265,7 @@ python src/data/optimize_weights.py         # re-optimize signal weights
 | `classification_cache` | Cached headline → industry mappings (14,000x speedup) |
 | `catalyst_alerts` | Detected catalyst events with stock picks per scan |
 | `catalyst_outcomes` | 24h outcome tracking for catalyst predictions |
+| `stock_knowledge` | Bursa stock relationships (business, parent/child, suppliers, competitors) |
 | `watchlist` | User's personal watchlist (symbol, note, price alerts) |
 | `news_tracker_state` | Last fetch time per news source |
 
@@ -298,8 +317,9 @@ python src/data/optimize_weights.py         # re-optimize signal weights
 | `StockPred-PriceTracker` | Registered |
 | `StockPred-NewsTracker` | Registered |
 | `StockPred-CatalystScan` | Registered (every 30 min) |
-| `StockPred-DailyCollector` | Not yet registered (run `setup_daily_collector.bat`) |
-| `StockPred-BatchPredict` | Not yet registered (run `setup_daily_collector.bat`) |
+| `StockPred-SocialCollector` | Registered (every 2 hours) |
+| `StockPred-DailyCollector` | Registered (daily 6 PM) |
+| `StockPred-BatchPredict` | Registered (daily 6:30 PM) |
 
 Setup: Run `setup_daily_collector.bat` once to register all Windows Task Scheduler jobs.
 
@@ -324,7 +344,10 @@ Stock universe: `config/stock_universe.py` — 81 Bursa + 503 S&P 500 + 5 indice
 
 ## Key Features
 
-- **Catalyst Alerts:** Every 30 min, scans news for 11 catalyst types (supply chain, tariff, rate decision, commodity, regulation, earnings, tech, geopolitical, pandemic, disaster, M&A), maps to affected industries, ranks stocks by predicted 24h impact with momentum + volume + exposure scoring
+- **Catalyst Alerts:** Every 30 min, scans 13 news sources for 11 catalyst types, detects direct stock mentions (219 aliases), expands to related stocks via knowledge graph (parent/subsidiary, supplier/customer, competitors, GLC peers), predicts 24h moves with 75% accuracy ML model
+- **Stock Knowledge Graph:** Researched Bursa relationships — Petronas siblings, banking peers, plantation competitors, supplier/customer chains, GLC cross-holdings (Khazanah, PNB, EPF)
+- **Ollama LLM:** Local Phi-3 Mini for deep headline analysis — event classification, stock extraction, sentiment reasoning
+- **Social Crawlers:** 13 news sources — Yahoo Finance, Benzinga, MarketWatch, CNBC, Investing.com, Google News MY/KLSE, FMT, Malay Mail, i3investor, KLSE Screener, Finnhub, Reddit
 - **My Watchlist:** Star stocks from Bursa tab, add notes, set price alerts, one-click analyze
 - **Daily Report tab:** All stocks ranked by prediction score, filterable by action/industry/confidence
 - **Prediction badges:** BUY/SELL/HOLD badges on each Bursa stock row
@@ -401,7 +424,7 @@ python -m pytest tests/ -v
 
 ## Testing
 
-**243 tests** across 20 test files. All run offline with mocked APIs (~8s).
+**271 tests** across 21 test files. All run offline with mocked APIs (~20s).
 
 ```bash
 python -m pytest tests/ -v --tb=short

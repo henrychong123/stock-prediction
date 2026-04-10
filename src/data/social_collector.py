@@ -137,6 +137,23 @@ def collect_yahoo_news(symbols: list[str] = None, run_sentiment: bool = True) ->
     return total_saved
 
 
+def collect_bursa_news(run_sentiment: bool = True) -> int:
+    """Collect from Bursa-specific sources (i3investor, KLSE Screener)."""
+    from src.data_sources.bursa_news import fetch_all_bursa_news
+
+    # Top Bursa stock codes (without .KL suffix) for stock-specific news
+    bursa_codes = [
+        "1155", "1295", "1023", "5347", "5183", "5225",  # blue chips
+        "5285", "6947", "3182", "8869", "5681", "7113",  # industrials
+    ]
+
+    log.info("Collecting Bursa news (i3investor, KLSE Screener)...")
+    articles = fetch_all_bursa_news(stock_codes=bursa_codes)
+    saved = _save_articles(articles, run_sentiment=run_sentiment)
+    log.info(f"  Bursa sources: {len(articles)} fetched, {saved} new saved")
+    return saved
+
+
 def collect_youtube(symbols: list[str] = None, run_sentiment: bool = True) -> int:
     """Collect from YouTube (requires YOUTUBE_API_KEY)."""
     from src.data_sources.youtube_sentiment import fetch_youtube_sentiment
@@ -179,7 +196,10 @@ def run(symbols: list[str] = None, skip_youtube: bool = False,
     # 2. Yahoo Finance (stock-specific, light rate limit)
     total += collect_yahoo_news(symbols=symbols, run_sentiment=run_sentiment)
 
-    # 3. YouTube (optional, quota-limited)
+    # 3. Bursa-specific sources (i3investor, KLSE Screener)
+    total += collect_bursa_news(run_sentiment=run_sentiment)
+
+    # 4. YouTube (optional, quota-limited)
     if not skip_youtube:
         total += collect_youtube(symbols=symbols, run_sentiment=run_sentiment)
 

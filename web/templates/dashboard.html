@@ -26,18 +26,60 @@
 
     <!-- NAV TABS -->
     <nav class="tabs" role="tablist" aria-label="Dashboard sections">
-        <button class="tab active" data-tab="stock-tab" role="tab" aria-selected="true" aria-controls="stock-tab"><span class="tab-icon">◈</span> Analysis</button>
-        <button class="tab" data-tab="sector-tab" role="tab" aria-selected="false" aria-controls="sector-tab"><span class="tab-icon">▦</span> Sectors</button>
-        <button class="tab" data-tab="newshub-tab" role="tab" aria-selected="false" aria-controls="newshub-tab"><span class="tab-icon">◉</span> News</button>
-        <button class="tab" data-tab="trends-tab" role="tab" aria-selected="false" aria-controls="trends-tab"><span class="tab-icon">↗</span> Trends</button>
-        <button class="tab" data-tab="report-tab" role="tab" aria-selected="false" aria-controls="report-tab"><span class="tab-icon">▤</span> Report</button>
-        <button class="tab" data-tab="model-tab" role="tab" aria-selected="false" aria-controls="model-tab"><span class="tab-icon">⚙</span> Model</button>
-        <button class="tab" data-tab="bursa-tab" role="tab" aria-selected="false" aria-controls="bursa-tab"><span class="tab-icon">◆</span> Bursa</button>
+        <button class="tab active" data-tab="home-tab" role="tab" aria-selected="true" aria-controls="home-tab"><span class="tab-icon">◈</span> Home</button>
+        <button class="tab" data-tab="stocks-tab" role="tab" aria-selected="false" aria-controls="stocks-tab"><span class="tab-icon">▦</span> Stocks</button>
         <button class="tab" data-tab="catalyst-tab" role="tab" aria-selected="false" aria-controls="catalyst-tab"><span class="tab-icon">⚡</span> Catalyst</button>
+        <button class="tab" data-tab="newshub-tab" role="tab" aria-selected="false" aria-controls="newshub-tab"><span class="tab-icon">◉</span> News</button>
+        <button class="tab" data-tab="settings-tab" role="tab" aria-selected="false" aria-controls="settings-tab"><span class="tab-icon">⚙</span> Settings</button>
     </nav>
 
     <!-- ===== TAB 1: STOCK ANALYSIS ===== -->
-    <div id="stock-tab" class="tab-content active" role="tabpanel">
+    <!-- ========== HOME TAB ========== -->
+    <div id="home-tab" class="tab-content active" role="tabpanel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <h2 style="margin:0;">Dashboard</h2>
+            <div class="home-sub-tabs">
+                <button class="home-sub-tab active" data-section="overview">Overview</button>
+                <button class="home-sub-tab" data-section="sectors">Sectors</button>
+                <button class="home-sub-tab" data-section="report">Report</button>
+                <button class="home-sub-tab" data-section="trends">Trends</button>
+            </div>
+        </div>
+        <div id="home-section-overview" class="home-section">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+                <div class="card">
+                    <h3 style="margin-top:0;">Sector Heatmap</h3>
+                    <div id="home-sectors" class="chart-wrap" style="height:280px;"><canvas id="home-sector-chart"></canvas></div>
+                </div>
+                <div class="card">
+                    <h3 style="margin-top:0;">Predictions Summary</h3>
+                    <div id="home-report-summary" style="margin-bottom:1rem;"><span class="text-muted">Loading...</span></div>
+                    <h3>Active Catalyst Alerts</h3>
+                    <div id="home-catalyst-summary"><span class="text-muted">Loading...</span></div>
+                </div>
+            </div>
+        </div>
+        <div id="home-section-sectors" class="home-section hidden"></div>
+        <div id="home-section-report" class="home-section hidden"></div>
+        <div id="home-section-trends" class="home-section hidden"></div>
+    </div>
+
+    <!-- ========== STOCKS TAB (wraps Analysis + Bursa) ========== -->
+    <div id="stocks-tab" class="tab-content" role="tabpanel">
+        <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+            <button class="stocks-view-btn active" data-view="analysis">Search & Analyse</button>
+            <button class="stocks-view-btn" data-view="market">Bursa Market</button>
+        </div>
+        <div id="stocks-analysis-section"></div>
+        <div id="stocks-market-section" class="hidden"></div>
+    </div>
+
+    <!-- ========== SETTINGS TAB (wraps Model) ========== -->
+    <div id="settings-tab" class="tab-content" role="tabpanel"></div>
+
+    <!-- ===== ORIGINAL CONTENT (kept for JS compatibility, reparented by JS) ===== -->
+    <!-- Old tab containers (content reparented by main.js into new wrapper tabs) -->
+    <div id="stock-tab" class="old-tab-source" style="display:none">
 
         <!-- Search area -->
         <div class="analysis-search-area">
@@ -296,7 +338,7 @@
     </div>
 
     <!-- ===== TAB 2: SECTOR OVERVIEW ===== -->
-    <div id="sector-tab" class="tab-content" role="tabpanel">
+    <div id="sector-tab" class="old-tab-source" style="display:none">
 
         <!-- Header -->
         <div class="sector-header-area">
@@ -408,7 +450,7 @@
     </div>
 
     <!-- ===== TAB 4: PREDICTION TRENDS ===== -->
-    <div id="trends-tab" class="tab-content" role="tabpanel">
+    <div id="trends-tab" class="old-tab-source" style="display:none">
 
         <!-- Header + search -->
         <div class="trends-header-area">
@@ -511,7 +553,7 @@
     </div>
 
     <!-- ===== TAB 5: DAILY REPORT ===== -->
-    <div id="report-tab" class="tab-content" role="tabpanel">
+    <div id="report-tab" class="old-tab-source" style="display:none">
         <div class="report-header-area">
             <div class="report-header-left">
                 <div class="report-header-title">Daily Prediction Report</div>
@@ -571,7 +613,7 @@
     </div>
 
     <!-- ===== TAB 6: MODEL INFO ===== -->
-    <div id="model-tab" class="tab-content" role="tabpanel">
+    <div id="model-tab" class="old-tab-source" style="display:none">
 
         <div class="model-header">
             <div>
@@ -634,7 +676,7 @@
     </div>
 
     <!-- ===== TAB 7: BURSA MARKET ===== -->
-    <div id="bursa-tab" class="tab-content" role="tabpanel">
+    <div id="bursa-tab" class="old-tab-source" style="display:none">
 
         <!-- KLCI index bar -->
         <div class="bursa-index-bar card">
@@ -899,6 +941,9 @@
     <script src="{{ url_for('static', filename='js/tab-model.js') }}"></script>
     <script src="{{ url_for('static', filename='js/tab-bursa.js') }}"></script>
     <script src="{{ url_for('static', filename='js/tab-catalyst.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tab-home.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tab-stocks.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tab-settings.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

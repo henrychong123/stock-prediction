@@ -1457,9 +1457,23 @@ def api_catalyst_alerts():
     hours = int(request.args.get("hours", 24))
     try:
         alerts = get_catalyst_alerts(hours_back=hours)
-        return jsonify({"alerts": alerts, "count": len(alerts)})
+        return jsonify(_sanitize_nan({"alerts": alerts, "count": len(alerts)}))
     except Exception as e:
         return jsonify({"error": str(e), "alerts": []}), 500
+
+
+def _sanitize_nan(obj):
+    """Recursively replace NaN/Inf with None in dicts/lists for JSON safety."""
+    import math
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
+        return obj
+    if isinstance(obj, dict):
+        return {k: _sanitize_nan(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_nan(v) for v in obj]
+    return obj
 
 
 @app.route("/api/catalyst/scan", methods=["POST"])
@@ -1473,15 +1487,20 @@ def api_catalyst_scan():
     try:
         result = scan_catalysts(hours_back=hours, max_picks=10)
         scan_id = str(uuid.uuid4())[:8]
-        save_catalyst_scan(scan_id, result.get("events", []), result.get("picks", []),
-                           direct_picks=result.get("direct_picks", []))
-        return jsonify({
+        try:
+            save_catalyst_scan(scan_id, result.get("events", []), result.get("picks", []),
+                               direct_picks=result.get("direct_picks", []))
+        except Exception:
+            pass  # DB lock is non-critical — scan results still returned
+
+        return jsonify(_sanitize_nan({
             "scan_id": scan_id,
             "events": result.get("events", []),
             "picks": result.get("picks", []),
+            "direct_picks": result.get("direct_picks", []),
             "headlines_scanned": result.get("headlines_scanned", 0),
             "scanned_at": result.get("scanned_at", ""),
-        })
+        }))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

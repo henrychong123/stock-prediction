@@ -8,6 +8,11 @@ torch>=2.1.0
 newsapi-python>=0.2.7
 feedparser>=6.0.10
 
+# Article scraping
+playwright>=1.40.0
+trafilatura>=1.6.0
+beautifulsoup4>=4.12.0
+
 # Geopolitical event tracking
 gdelt-doc-api>=1.4.0
 

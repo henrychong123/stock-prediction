@@ -379,6 +379,15 @@ def detect_catalyst_events(headlines: list[dict]) -> list[CatalystEvent]:
 
 def _get_stock_momentum(symbol: str) -> dict:
     """Get recent technical momentum for a stock (lightweight)."""
+    import math
+
+    def _safe(v, default=0):
+        try:
+            f = float(v)
+            return default if (math.isnan(f) or math.isinf(f)) else round(f, 2)
+        except (TypeError, ValueError):
+            return default
+
     try:
         import yfinance as yf
         ticker = yf.Ticker(symbol)
@@ -387,16 +396,17 @@ def _get_stock_momentum(symbol: str) -> dict:
             return {"momentum": 0, "price": 0, "volume_ratio": 1}
 
         close = hist["Close"]
-        price = float(close.iloc[-1])
-        ret_1d = float((close.iloc[-1] / close.iloc[-2] - 1) * 100)
+        price = _safe(close.iloc[-1])
+        ret_1d = _safe((close.iloc[-1] / close.iloc[-2] - 1) * 100)
 
         vol = hist["Volume"]
-        vol_ratio = float(vol.iloc[-1] / vol.mean()) if vol.mean() > 0 else 1
+        vol_mean = vol.mean()
+        vol_ratio = _safe(vol.iloc[-1] / vol_mean if vol_mean > 0 else 1, 1)
 
         return {
-            "momentum": round(ret_1d, 2),
-            "price": round(price, 2),
-            "volume_ratio": round(vol_ratio, 2),
+            "momentum": ret_1d,
+            "price": price,
+            "volume_ratio": vol_ratio,
         }
     except Exception:
         return {"momentum": 0, "price": 0, "volume_ratio": 1}
@@ -684,6 +694,75 @@ def detect_direct_stock_mentions(headlines: list[dict]) -> list[StockPick]:
     return picks
 
 
+# ── Knowledge Graph Expansion ────────────────────────────────────────────────
+
+def expand_picks_with_knowledge(picks: list[StockPick]) -> list[StockPick]:
+    """Expand stock picks to include related stocks from the knowledge graph.
+
+    When news mentions Petronas Chemicals (5183.KL), auto-add:
+    - Siblings: Petronas Dagangan (85%), Petronas Gas (85%), MISC (85%)
+    - Suppliers: Sapura Energy (65%), Dialog (65%), Yinson (65%)
+    - Competitors: Dialog ↔ Sapura (50%)
+    - Same GLC: other Khazanah/PNB stocks (30%)
+
+    Uses hardcoded researched relationships from config/stock_knowledge.py.
+    """
+    from config.stock_knowledge import get_all_related
+
+    # Build stock name lookup
+    stock_names = {}
+    try:
+        from config.settings import BURSA_INDUSTRIES
+        for ind, data in BURSA_INDUSTRIES.items():
+            for s in data["stocks"]:
+                stock_names[s["symbol"]] = s["name"]
+    except Exception:
+        pass
+
+    expanded = []
+    seen_symbols = {p.symbol for p in picks}
+
+    for pick in picks:
+        # Only expand Bursa stocks (knowledge graph is Bursa-only)
+        if not pick.symbol.endswith(".KL"):
+            continue
+
+        relations = get_all_related(pick.symbol)
+        if not relations:
+            continue
+
+        for sym, rel_type, discount in relations:
+            if sym in seen_symbols:
+                continue
+            seen_symbols.add(sym)
+
+            rel_name = stock_names.get(sym, sym)
+            cascade_score = pick.score * discount
+            cascade_move = pick.predicted_move_pct * discount
+
+            cascade_pick = StockPick(
+                symbol=sym,
+                name=rel_name,
+                industry=pick.industry,
+                direction=pick.direction,
+                score=round(cascade_score, 1),
+                predicted_move_pct=round(cascade_move, 2),
+                reasons=[
+                    f"Cascade from {pick.symbol} ({pick.name})",
+                    f"Relationship: {rel_type}",
+                    f"Original: {pick.catalyst_headline[:60]}",
+                ],
+                catalyst_type="cascade",
+                catalyst_headline=pick.catalyst_headline,
+                current_price=0,
+                momentum_score=0,
+                sector_exposure=discount,
+            )
+            expanded.append(cascade_pick)
+
+    return expanded
+
+
 # ── Full Scan Pipeline ───────────────────────────────────────────────────────
 
 def scan_catalysts(hours_back: int = 6, max_picks: int = 10) -> dict:
@@ -730,9 +809,19 @@ def scan_catalysts(hours_back: int = 6, max_picks: int = 10) -> dict:
         industry_picks.extend(picks)
         log.info(f"  {event.label}: {len(picks)} stock picks")
 
-    # Merge: direct picks take priority, then industry picks
-    all_picks = list(direct_picks)  # direct first
+    # Layer 3: Knowledge graph expansion (cascade to related stocks)
+    cascade_picks = expand_picks_with_knowledge(direct_picks)
+    if cascade_picks:
+        log.info(f"Knowledge graph cascade: {len(cascade_picks)} additional picks")
+
+    # Merge: direct picks > cascade > industry picks
+    all_picks = list(direct_picks)
     seen = {p.symbol for p in all_picks}
+
+    for pick in cascade_picks:
+        if pick.symbol not in seen:
+            all_picks.append(pick)
+            seen.add(pick.symbol)
 
     for pick in industry_picks:
         if pick.symbol not in seen:
@@ -747,6 +836,7 @@ def scan_catalysts(hours_back: int = 6, max_picks: int = 10) -> dict:
         "events": [asdict(e) for e in events],
         "picks": [asdict(p) for p in final_picks],
         "direct_picks": [asdict(p) for p in direct_picks[:max_picks]],
+        "cascade_picks": [asdict(p) for p in cascade_picks[:max_picks]],
         "scanned_at": datetime.now().isoformat(),
         "headlines_scanned": len(headlines),
     }
