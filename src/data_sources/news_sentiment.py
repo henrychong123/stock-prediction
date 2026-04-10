@@ -108,8 +108,11 @@ def fetch_market_news(category: str = "general") -> list[dict]:
     if not FINNHUB_API_KEY:
         return [{"error": "FINNHUB_API_KEY not set. Get one free at https://finnhub.io/register"}]
 
-    client = finnhub.Client(api_key=FINNHUB_API_KEY)
-    news = client.general_news(category, min_id=0)
+    try:
+        client = finnhub.Client(api_key=FINNHUB_API_KEY)
+        news = client.general_news(category, min_id=0)
+    except Exception:
+        return []
 
     articles = []
     for item in news[:20]:  # Limit to 20 most recent
@@ -144,10 +147,13 @@ def fetch_company_news(symbol: str, days_back: int = 7) -> list[dict]:
     if not FINNHUB_API_KEY:
         return [{"error": "FINNHUB_API_KEY not set"}]
 
-    client = finnhub.Client(api_key=FINNHUB_API_KEY)
-    end = datetime.now().strftime("%Y-%m-%d")
-    start = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d")
-    news = client.company_news(symbol, _from=start, to=end)
+    try:
+        client = finnhub.Client(api_key=FINNHUB_API_KEY)
+        end = datetime.now().strftime("%Y-%m-%d")
+        start = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d")
+        news = client.company_news(symbol, _from=start, to=end)
+    except Exception:
+        return []
 
     articles = []
     for item in news[:15]:
@@ -167,42 +173,188 @@ def fetch_company_news(symbol: str, days_back: int = 7) -> list[dict]:
     return articles
 
 
-def fetch_influential_figure_news() -> list[dict]:
-    """Fetch news about influential figures (Musk, Trump, etc.).
+def fetch_influential_figure_news(figures: list[str] = None,
+                                   include_my: bool = False) -> list[dict]:
+    """Fetch news about influential figures via Google News RSS + Finnhub.
 
-    Since X/Twitter free API is effectively dead, we monitor news coverage
-    of influential people's statements and posts instead.
+    Combines two sources:
+    1. Google News RSS per figure (free, unlimited, real-time)
+    2. Finnhub general news scan (existing, limited to ~20 articles)
 
     Returns:
         List of news items about influential figures with sentiment
     """
-    if not FINNHUB_API_KEY:
-        return [{"error": "FINNHUB_API_KEY not set"}]
+    import feedparser
+    from config.settings import MY_INFLUENTIAL_FIGURES
 
-    client = finnhub.Client(api_key=FINNHUB_API_KEY)
-    news = client.general_news("general", min_id=0)
+    if figures is None:
+        figures = list(INFLUENTIAL_FIGURES)
+        if include_my:
+            figures += MY_INFLUENTIAL_FIGURES
 
     figure_news = []
-    for item in news:
-        headline = item.get("headline", "")
-        summary = item.get("summary", "")
-        text = f"{headline} {summary}".lower()
+    seen_headlines = set()
 
-        for figure in INFLUENTIAL_FIGURES:
-            if figure.lower() in text:
-                full_text = f"{headline}. {summary}" if summary else headline
-                sentiment = analyze_sentiment(full_text)
+    # ── Source 1: Google News RSS per figure (with timeout) ─────────────
+    import urllib.request
 
+    for figure in figures:
+        query = figure.replace(" ", "+")
+        url = f"https://news.google.com/rss/search?q={query}+stock+market&hl=en-US&gl=US&ceid=US:en"
+        try:
+            # Use urllib with timeout instead of feedparser's default (no timeout)
+            req = urllib.request.urlopen(url, timeout=8)
+            raw = req.read()
+            feed = feedparser.parse(raw)
+            for entry in feed.entries[:3]:  # top 3 per figure (was 5, reduced for speed)
+                headline = entry.get("title", "")
+                # Google News format: "Headline - Source"
+                parts = headline.rsplit(" - ", 1)
+                clean_headline = parts[0].strip()
+                source = parts[1].strip() if len(parts) > 1 else "Google News"
+
+                # Deduplicate
+                norm = clean_headline[:60].lower()
+                if norm in seen_headlines:
+                    continue
+                seen_headlines.add(norm)
+
+                # Parse date
+                pub = entry.get("published_parsed")
+                dt = datetime(*pub[:6]).isoformat() if pub else datetime.now().isoformat()
+
+                sentiment = analyze_sentiment(clean_headline)
                 figure_news.append({
                     "figure": figure,
-                    "headline": headline,
-                    "source": item.get("source", "unknown"),
-                    "datetime": datetime.fromtimestamp(item.get("datetime", 0)).isoformat(),
+                    "headline": clean_headline,
+                    "source": source,
+                    "url": entry.get("link", ""),
+                    "datetime": dt,
                     "sentiment": sentiment,
+                    "platform": "google-news",
                 })
-                break  # Don't double-count if multiple figures mentioned
+        except Exception:
+            continue
 
+    # ── Source 2: Finnhub general news scan ────────────────────────────────
+    if FINNHUB_API_KEY:
+        try:
+            client = finnhub.Client(api_key=FINNHUB_API_KEY)
+            news = client.general_news("general", min_id=0)
+
+            for item in news:
+                headline = item.get("headline", "")
+                summary = item.get("summary", "")
+                text = f"{headline} {summary}".lower()
+
+                for figure in figures:
+                    if figure.lower() in text:
+                        norm = headline[:60].lower()
+                        if norm in seen_headlines:
+                            break
+                        seen_headlines.add(norm)
+
+                        full_text = f"{headline}. {summary}" if summary else headline
+                        sentiment = analyze_sentiment(full_text)
+                        figure_news.append({
+                            "figure": figure,
+                            "headline": headline,
+                            "source": item.get("source", "unknown"),
+                            "url": item.get("url", ""),
+                            "datetime": datetime.fromtimestamp(item.get("datetime", 0)).isoformat(),
+                            "sentiment": sentiment,
+                            "platform": "finnhub",
+                        })
+                        break
+        except Exception:
+            pass
+
+    # Sort by datetime descending
+    figure_news.sort(key=lambda x: x.get("datetime", ""), reverse=True)
     return figure_news
+
+
+def get_figure_signal(symbol: str) -> dict:
+    """Get influential figure activity relevant to a stock.
+
+    Returns figure-level sentiment breakdown + overall signal.
+    """
+    from config.settings import (FIGURE_STOCK_MAP, MY_FIGURE_STOCK_MAP,
+                                  MY_INFLUENTIAL_FIGURES)
+
+    sym_upper = symbol.upper().replace(".KL", "")
+    is_my = symbol.upper().endswith(".KL") or symbol.startswith("^KL")
+
+    # Determine which figures are relevant to this stock
+    stock_map = {**FIGURE_STOCK_MAP, **MY_FIGURE_STOCK_MAP} if is_my else FIGURE_STOCK_MAP
+    relevant_figures = []
+    for figure, stocks in stock_map.items():
+        # Match exact symbol or base code
+        for s in stocks:
+            s_clean = s.upper().replace(".KL", "")
+            if s_clean == sym_upper or s_clean == symbol.upper():
+                relevant_figures.append(figure)
+                break
+
+    # If no specific mapping, use all figures for broad market stocks
+    if not relevant_figures:
+        if is_my:
+            relevant_figures = list(MY_INFLUENTIAL_FIGURES)
+        else:
+            relevant_figures = list(INFLUENTIAL_FIGURES)
+
+    # Fetch news for relevant figures
+    all_news = fetch_influential_figure_news(figures=relevant_figures, include_my=is_my)
+
+    if not all_news:
+        return {
+            "figures": [],
+            "total_mentions": 0,
+            "overall_sentiment": 0,
+            "signal": "neutral",
+        }
+
+    # Group by figure
+    by_figure = {}
+    for item in all_news:
+        fig = item["figure"]
+        if fig not in by_figure:
+            by_figure[fig] = {"articles": [], "scores": []}
+        by_figure[fig]["articles"].append(item)
+        by_figure[fig]["scores"].append(item["sentiment"]["score"])
+
+    # Build figure summaries
+    figures_out = []
+    all_scores = []
+    for fig, data in by_figure.items():
+        avg = sum(data["scores"]) / len(data["scores"]) if data["scores"] else 0
+        all_scores.extend(data["scores"])
+
+        label = "bullish" if avg > 0.1 else "bearish" if avg < -0.1 else "neutral"
+        figures_out.append({
+            "name": fig,
+            "mention_count": len(data["articles"]),
+            "avg_sentiment": round(avg, 3),
+            "signal": label,
+            "latest_headline": data["articles"][0]["headline"] if data["articles"] else "",
+            "latest_source": data["articles"][0].get("source", "") if data["articles"] else "",
+            "latest_datetime": data["articles"][0].get("datetime", "") if data["articles"] else "",
+            "latest_url": data["articles"][0].get("url", "") if data["articles"] else "",
+            "articles": data["articles"][:3],  # top 3 per figure
+        })
+
+    # Sort by mention count
+    figures_out.sort(key=lambda x: x["mention_count"], reverse=True)
+
+    overall = sum(all_scores) / len(all_scores) if all_scores else 0
+    signal = "bullish" if overall > 0.1 else "bearish" if overall < -0.1 else "neutral"
+
+    return {
+        "figures": figures_out,
+        "total_mentions": len(all_news),
+        "overall_sentiment": round(overall, 3),
+        "signal": signal,
+    }
 
 
 def get_news_signal(symbol: str) -> dict:

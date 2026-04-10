@@ -1,0 +1,9 @@
+[Unit]
+Description=Run StockSight Batch Predict at 6:30 PM UTC
+
+[Timer]
+OnCalendar=*-*-* 18:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

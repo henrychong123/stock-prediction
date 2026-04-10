@@ -10,7 +10,7 @@ class TestSectorDefinitions:
         assert len(US_SECTORS) == 11  # 11 GICS sectors
 
     def test_my_sectors_count(self):
-        assert len(MY_SECTORS) == 9
+        assert len(MY_SECTORS) == 9  # 9 Malaysian sectors
 
     def test_get_sectors_us(self):
         sectors = get_sectors("US")
@@ -38,7 +38,7 @@ class TestSectorLookup:
 
     def test_find_my_stock(self):
         assert get_sector_for_symbol("1155.KL") == "Banking & Finance"
-        assert get_sector_for_symbol("5183.KL") == "Oil & Gas"
+        assert get_sector_for_symbol("5285.KL") == "Plantation & Agriculture"
 
     def test_unknown_symbol(self):
         assert get_sector_for_symbol("ZZZZZ") is None

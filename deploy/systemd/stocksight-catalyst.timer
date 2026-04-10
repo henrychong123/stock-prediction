@@ -1,0 +1,9 @@
+[Unit]
+Description=Run StockSight Catalyst Scanner every 30 minutes (offset from news)
+
+[Timer]
+OnCalendar=*:15,45
+Persistent=true
+
+[Install]
+WantedBy=timers.target

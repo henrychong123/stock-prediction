@@ -22,7 +22,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 # ── Mock unavailable third-party modules before any src imports ─────
 # yfinance and finnhub may not be installed in CI; stub them out.
 
-for mod_name in ("yfinance", "finnhub"):
+for mod_name in ("yfinance", "finnhub", "praw", "feedparser", "gdeltdoc",
+                  "ib_insync", "transformers", "xgboost", "lightgbm", "joblib"):
     if mod_name not in sys.modules:
         sys.modules[mod_name] = MagicMock()
 
@@ -130,6 +131,71 @@ def patch_realtime_quote():
 
 
 # ── Flask test client ───────────────────────────────────────────────
+
+@pytest.fixture
+def patch_news_signal():
+    """Patch get_news_signal to return synthetic data."""
+    signal = {
+        "signal": "bullish",
+        "strength": 0.7,
+        "avg_sentiment": 0.4,
+        "article_count": 5,
+        "reasons": ["Apple beats earnings expectations"],
+    }
+    with patch("src.data_sources.news_sentiment.get_news_signal", return_value=signal) as m:
+        yield m
+
+
+@pytest.fixture
+def patch_social_signal():
+    """Patch get_social_signal to return synthetic data."""
+    signal = {
+        "signal": "bullish",
+        "strength": 0.65,
+        "avg_sentiment": 0.3,
+        "post_count": 12,
+        "figure_mentions": [],
+        "reasons": ["[r/wallstreetbets] AAPL mooning (↑42)"],
+    }
+    with patch("src.data_sources.social_media.get_social_signal", return_value=signal) as m:
+        yield m
+
+
+@pytest.fixture
+def patch_geopolitical_signal():
+    """Patch get_geopolitical_signal to return synthetic data."""
+    signal = {
+        "signal": "neutral",
+        "strength": 0.5,
+        "avg_tone": 0.1,
+        "event_count": 10,
+        "reasons": ["No major geopolitical events"],
+        "source": "stored",
+    }
+    with patch("src.data_sources.geopolitical.get_geopolitical_signal", return_value=signal) as m:
+        yield m
+
+
+@pytest.fixture
+def patch_order_book():
+    """Patch get_order_book to return synthetic L1 data."""
+    book = {
+        "source": "yfinance (Level 1)",
+        "level": 1,
+        "symbol": "AAPL",
+        "bids": [{"price": 150.0, "size": 1000}],
+        "asks": [{"price": 150.5, "size": 800}],
+        "best_bid": 150.0,
+        "best_ask": 150.5,
+        "spread": 0.5,
+        "spread_pct": 0.333,
+        "total_bid_vol": 1000,
+        "total_ask_vol": 800,
+        "pressure": 55.6,
+    }
+    with patch("src.data_sources.order_book.get_order_book", return_value=book) as m:
+        yield m
+
 
 @pytest.fixture
 def client():

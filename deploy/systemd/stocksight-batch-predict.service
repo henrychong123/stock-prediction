@@ -1,0 +1,13 @@
+[Unit]
+Description=StockSight Batch Prediction
+After=network.target stocksight-daily-collector.service
+
+[Service]
+Type=oneshot
+User=stocksight
+Group=stocksight
+WorkingDirectory=/opt/stocksight
+Environment=PATH=/opt/stocksight/venv/bin:/usr/bin
+EnvironmentFile=/opt/stocksight/.env
+ExecStart=/opt/stocksight/venv/bin/python src/data/batch_predict.py --quick
+TimeoutStartSec=3600

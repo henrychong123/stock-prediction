@@ -1,0 +1,8 @@
+[Unit]
+Description=StockSight Database Backup
+
+[Service]
+Type=oneshot
+User=stocksight
+Group=stocksight
+ExecStart=/opt/stocksight/deploy/scripts/backup-db.sh

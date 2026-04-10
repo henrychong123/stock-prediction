@@ -1,0 +1,13 @@
+[Unit]
+Description=StockSight News Tracker
+After=network.target
+
+[Service]
+Type=oneshot
+User=stocksight
+Group=stocksight
+WorkingDirectory=/opt/stocksight
+Environment=PATH=/opt/stocksight/venv/bin:/usr/bin
+EnvironmentFile=/opt/stocksight/.env
+ExecStart=/opt/stocksight/venv/bin/python news_tracker.py
+TimeoutStartSec=600

@@ -11,316 +11,894 @@
     <!-- HEADER -->
     <header class="header">
         <div class="header-left">
-            <h1>Stock Prediction Dashboard</h1>
-            <span class="subtitle">Multi-Signal Analysis Engine</span>
+            <div class="header-brand">
+                <span class="header-logo">◈</span>
+                <h1>StockSight</h1>
+            </div>
+            <span class="header-divider"></span>
+            <span class="subtitle">Multi-signal prediction engine</span>
         </div>
         <div class="header-right">
-            <span id="clock"></span>
-            <span class="badge">LIVE</span>
+            <span class="delay-badge">~15 min delay</span>
+            <span id="clock" aria-live="polite"></span>
         </div>
     </header>
 
     <!-- NAV TABS -->
-    <nav class="tabs">
-        <button class="tab active" data-tab="stock-tab">Stock Analysis</button>
-        <button class="tab" data-tab="sector-tab">Sector Overview</button>
-        <button class="tab" data-tab="newshub-tab">News Hub</button>
-        <button class="tab" data-tab="trends-tab">Prediction Trends</button>
+    <nav class="tabs" role="tablist" aria-label="Dashboard sections">
+        <button class="tab active" data-tab="stock-tab" role="tab" aria-selected="true" aria-controls="stock-tab"><span class="tab-icon">◈</span> Analysis</button>
+        <button class="tab" data-tab="sector-tab" role="tab" aria-selected="false" aria-controls="sector-tab"><span class="tab-icon">▦</span> Sectors</button>
+        <button class="tab" data-tab="newshub-tab" role="tab" aria-selected="false" aria-controls="newshub-tab"><span class="tab-icon">◉</span> News</button>
+        <button class="tab" data-tab="trends-tab" role="tab" aria-selected="false" aria-controls="trends-tab"><span class="tab-icon">↗</span> Trends</button>
+        <button class="tab" data-tab="report-tab" role="tab" aria-selected="false" aria-controls="report-tab"><span class="tab-icon">▤</span> Report</button>
+        <button class="tab" data-tab="model-tab" role="tab" aria-selected="false" aria-controls="model-tab"><span class="tab-icon">⚙</span> Model</button>
+        <button class="tab" data-tab="bursa-tab" role="tab" aria-selected="false" aria-controls="bursa-tab"><span class="tab-icon">◆</span> Bursa</button>
+        <button class="tab" data-tab="catalyst-tab" role="tab" aria-selected="false" aria-controls="catalyst-tab"><span class="tab-icon">⚡</span> Catalyst</button>
     </nav>
 
     <!-- ===== TAB 1: STOCK ANALYSIS ===== -->
-    <div id="stock-tab" class="tab-content active">
-        <!-- Market Selector -->
-        <div class="market-selector">
-            <span>Market:</span>
-            <button class="market-btn active" onclick="switchDashMarket('US')">US (NYSE/NASDAQ)</button>
-            <button class="market-btn" onclick="switchDashMarket('MY')">Malaysia (Bursa/KLSE)</button>
+    <div id="stock-tab" class="tab-content active" role="tabpanel">
+
+        <!-- Search area -->
+        <div class="analysis-search-area">
+            <div class="market-selector">
+                <button class="market-btn active" data-action="switch-market" data-arg="US" data-market="US">US Market</button>
+                <button class="market-btn" data-action="switch-market" data-arg="MY" data-market="MY">Bursa Malaysia</button>
+            </div>
+            <div class="search-bar">
+                <input type="text" id="symbol-input" placeholder="Symbol — e.g. TSLA, AAPL, 1155.KL" aria-label="Stock symbol" />
+                <select id="period-select" aria-label="Analysis period">
+                    <option value="1mo">1 Month</option>
+                    <option value="3mo">3 Months</option>
+                    <option value="6mo" selected>6 Months</option>
+                    <option value="1y">1 Year</option>
+                    <option value="2y">2 Years</option>
+                </select>
+                <div class="analyze-row">
+                    <button id="analyze-btn" class="btn-primary" data-action="analyze">Analyze</button>
+                    <div class="analysis-mode-switch" title="Full: uses cached results (instant). Fast: technical + ML only.">
+                        <button class="mode-btn active" data-action="set-analysis-mode" data-mode="full">Full</button>
+                        <button class="mode-btn" data-action="set-analysis-mode" data-mode="fast">Fast</button>
+                        <input type="hidden" id="full-mode-toggle" value="full">
+                    </div>
+                </div>
+            </div>
+            <div id="quick-picks-us" class="quick-picks">
+                <span>Quick picks:</span>
+                <button data-action="quick-analyze" data-arg="TSLA">TSLA</button>
+                <button data-action="quick-analyze" data-arg="AAPL">AAPL</button>
+                <button data-action="quick-analyze" data-arg="NVDA">NVDA</button>
+                <button data-action="quick-analyze" data-arg="GOOGL">GOOGL</button>
+                <button data-action="quick-analyze" data-arg="AMZN">AMZN</button>
+                <button data-action="quick-analyze" data-arg="MSFT">MSFT</button>
+                <button data-action="quick-analyze" data-arg="META">META</button>
+            </div>
+            <div id="quick-picks-my" class="quick-picks hidden">
+                <span>Quick picks:</span>
+                <button data-action="quick-analyze" data-arg="1155.KL">Maybank</button>
+                <button data-action="quick-analyze" data-arg="1295.KL">Public Bank</button>
+                <button data-action="quick-analyze" data-arg="1023.KL">CIMB</button>
+                <button data-action="quick-analyze" data-arg="5347.KL">Tenaga</button>
+                <button data-action="quick-analyze" data-arg="5183.KL">PetChem</button>
+                <button data-action="quick-analyze" data-arg="5225.KL">IHH</button>
+                <button data-action="quick-analyze" data-arg="8869.KL">Press Metal</button>
+                <button data-action="quick-analyze" data-arg="6947.KL">CelcomDigi</button>
+                <button data-action="quick-analyze" data-arg="3182.KL">Genting</button>
+            </div>
         </div>
 
-        <!-- Search Bar -->
-        <div class="search-bar">
-            <input type="text" id="symbol-input" placeholder="Enter stock symbol (e.g., TSLA, AAPL, NVDA)" />
-            <select id="period-select">
-                <option value="1mo">1 Month</option>
-                <option value="3mo">3 Months</option>
-                <option value="6mo" selected>6 Months</option>
-                <option value="1y">1 Year</option>
-                <option value="2y">2 Years</option>
-            </select>
-            <button id="analyze-btn" onclick="analyzeStock()">Analyze</button>
+        <!-- Welcome state (shown before first analysis) -->
+        <div id="analysis-welcome" class="analysis-welcome">
+            <div class="welcome-grid">
+                <div class="welcome-feature">
+                    <div class="welcome-icon">◈</div>
+                    <div class="welcome-feat-title">Multi-Signal Prediction</div>
+                    <div class="welcome-feat-desc">Combines technical indicators, news sentiment, market momentum, and geopolitical signals into a single score</div>
+                </div>
+                <div class="welcome-feature">
+                    <div class="welcome-icon">◉</div>
+                    <div class="welcome-feat-title">Real-Time Data</div>
+                    <div class="welcome-feat-desc">Prices from Yahoo Finance (~15 min delay). Supports US stocks and Bursa Malaysia. Switch markets above.</div>
+                </div>
+                <div class="welcome-feature">
+                    <div class="welcome-icon">↗</div>
+                    <div class="welcome-feat-title">Track Trends</div>
+                    <div class="welcome-feat-desc">Every analysis is saved. Visit the Trends tab to see how predictions evolve over time for any symbol.</div>
+                </div>
+            </div>
+            <p class="welcome-disclaimer">For educational purposes only — not investment advice. Confidence below 40% means insufficient signal.</p>
         </div>
 
-        <!-- Quick Picks -->
-        <div id="quick-picks-us" class="quick-picks">
-            <span>Quick:</span>
-            <button onclick="quickAnalyze('TSLA')">TSLA</button>
-            <button onclick="quickAnalyze('AAPL')">AAPL</button>
-            <button onclick="quickAnalyze('NVDA')">NVDA</button>
-            <button onclick="quickAnalyze('GOOGL')">GOOGL</button>
-            <button onclick="quickAnalyze('AMZN')">AMZN</button>
-            <button onclick="quickAnalyze('MSFT')">MSFT</button>
-            <button onclick="quickAnalyze('META')">META</button>
-        </div>
-        <div id="quick-picks-my" class="quick-picks hidden">
-            <span>Quick:</span>
-            <button onclick="quickAnalyze('1155.KL')">Maybank</button>
-            <button onclick="quickAnalyze('1295.KL')">Public Bank</button>
-            <button onclick="quickAnalyze('1023.KL')">CIMB</button>
-            <button onclick="quickAnalyze('5347.KL')">Tenaga</button>
-            <button onclick="quickAnalyze('5183.KL')">PetChem</button>
-            <button onclick="quickAnalyze('5225.KL')">IHH</button>
-            <button onclick="quickAnalyze('8869.KL')">Press Metal</button>
-            <button onclick="quickAnalyze('6947.KL')">CelcomDigi</button>
-            <button onclick="quickAnalyze('3182.KL')">Genting</button>
-        </div>
-
-        <!-- Loading indicator -->
-        <div id="stock-loading" class="loading hidden">
+        <!-- Loading with step progress -->
+        <div id="stock-loading" class="loading hidden" aria-live="polite">
             <div class="spinner"></div>
-            <span>Analyzing signals...</span>
-        </div>
-
-        <!-- Prediction Card -->
-        <div id="prediction-card" class="card prediction-card hidden">
-            <div class="prediction-header">
-                <div>
-                    <h2 id="pred-symbol"></h2>
-                    <span id="pred-price" class="price"></span>
-                    <span id="pred-change" class="change"></span>
-                </div>
-                <div id="pred-action" class="action-badge"></div>
-            </div>
-            <div class="confidence-bar-container">
-                <label>Confidence</label>
-                <div class="confidence-bar">
-                    <div id="pred-confidence-fill" class="confidence-fill"></div>
-                </div>
-                <span id="pred-confidence-text"></span>
+            <div class="analysis-progress">
+                <div id="analysis-status-text" class="analysis-status-text">Analyzing signals…</div>
+                <div class="analysis-steps" id="analysis-steps"></div>
             </div>
         </div>
 
-        <!-- Signal Breakdown -->
-        <div id="signals-section" class="hidden">
-            <div class="grid-2">
-                <div class="card">
-                    <h3>Signal Breakdown</h3>
-                    <canvas id="signals-radar"></canvas>
-                </div>
-                <div class="card">
-                    <h3>Signal Weights</h3>
-                    <canvas id="weights-doughnut"></canvas>
-                </div>
-            </div>
-            <div id="signal-cards" class="grid-5"></div>
-        </div>
+        <!-- Results: two-column layout -->
+        <div class="analysis-layout">
 
-        <!-- Price Chart -->
-        <div id="chart-section" class="hidden">
-            <div class="card">
-                <h3>Price History & Technical Indicators</h3>
-                <canvas id="price-chart"></canvas>
-            </div>
-            <div class="grid-2">
-                <div class="card">
-                    <h3>RSI (Relative Strength Index)</h3>
-                    <canvas id="rsi-chart"></canvas>
-                </div>
-                <div class="card">
-                    <h3>MACD</h3>
-                    <canvas id="macd-chart"></canvas>
-                </div>
-            </div>
-            <div class="card">
-                <h3>Volume</h3>
-                <canvas id="volume-chart"></canvas>
-            </div>
-        </div>
+            <!-- LEFT: verdict + signals + reasons -->
+            <div class="analysis-left-col">
 
-        <!-- Key Reasons -->
-        <div id="reasons-section" class="card hidden">
-            <h3>Key Analysis Reasons</h3>
-            <ul id="reasons-list"></ul>
-        </div>
+                <!-- Prediction verdict -->
+                <div id="prediction-card" class="card prediction-card hidden" aria-live="polite">
+                    <div class="pred-company-row">
+                        <span id="pred-symbol" class="pred-symbol-lg"></span>
+                        <span id="pred-company-name" class="pred-company-name"></span>
+                    </div>
+                    <div class="pred-price-row">
+                        <span id="pred-price" class="pred-price-lg"></span>
+                        <span id="pred-change" class="pred-change-inline"></span>
+                    </div>
+                    <div id="pred-action" class="action-badge action-badge-lg"></div>
+                    <!-- Narrative summary -->
+                    <div id="pred-narrative" class="pred-narrative"></div>
+                    <div class="confidence-bar-container" style="margin-top:14px;">
+                        <div class="conf-label-row">
+                            <label>Confidence</label>
+                            <span id="pred-conf-level" class="conf-level-badge"></span>
+                        </div>
+                        <div class="confidence-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                            <div id="pred-confidence-fill" class="confidence-fill"></div>
+                        </div>
+                        <span id="pred-confidence-text"></span>
+                    </div>
+                </div>
+
+                <!-- Top reason (inline, above signals) -->
+                <div id="top-reason-card" class="card top-reason-card hidden">
+                    <div class="top-reason-label">Primary Signal</div>
+                    <div id="top-reason-text" class="top-reason-text"></div>
+                </div>
+
+                <!-- Signal scores -->
+                <div id="signals-section" class="card analysis-signals-card hidden">
+                    <div class="signals-header-row">
+                        <h3>Signal Breakdown</h3>
+                        <span id="weight-source-badge" class="weight-source-badge"></span>
+                    </div>
+                    <!-- Tabbed charts: Signal Strength / Weight Distribution -->
+                    <div class="signals-tab-bar">
+                        <button class="signals-tab active" data-action="signals-view-tab" data-signals-view="radar">Strength</button>
+                        <button class="signals-tab" data-action="signals-view-tab" data-signals-view="weights">Weights</button>
+                    </div>
+                    <div class="signals-chart-container">
+                        <div id="signals-view-radar" class="signals-view active">
+                            <canvas id="signals-radar" aria-label="Signal strength radar chart"></canvas>
+                        </div>
+                        <div id="signals-view-weights" class="signals-view hidden">
+                            <canvas id="weights-doughnut" aria-label="Signal weight distribution"></canvas>
+                        </div>
+                    </div>
+                    <div id="signal-cards" class="signal-list"></div>
+                </div>
+
+                <!-- Reasons -->
+                <div id="reasons-section" class="card hidden">
+                    <h3>Key Analysis Reasons</h3>
+                    <ul id="reasons-list"></ul>
+                </div>
+
+                <!-- Market Movers (influential figures) -->
+                <div id="market-movers-card" class="card market-movers-card hidden">
+                    <div class="mm-header">
+                        <h3>Market Movers</h3>
+                        <span id="mm-signal" class="mm-signal-badge"></span>
+                    </div>
+                    <div id="mm-figures"></div>
+                    <div id="mm-empty" class="hint hidden" style="padding:8px 0">No figure activity found</div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT: charts -->
+            <div class="analysis-right-col">
+                <div id="chart-section" class="hidden">
+
+                    <!-- Price chart with overlay toggles -->
+                    <div class="card">
+                        <div class="chart-header-row">
+                            <h3>Price History &amp; Technical Indicators</h3>
+                            <div class="overlay-toggles" id="overlay-toggles">
+                                <label class="overlay-toggle"><input type="checkbox" data-overlay="ema"> <span>EMA 9/21</span></label>
+                                <label class="overlay-toggle"><input type="checkbox" data-overlay="vwap"> <span>VWAP</span></label>
+                                <label class="overlay-toggle"><input type="checkbox" data-overlay="sar"> <span>SAR</span></label>
+                                <label class="overlay-toggle"><input type="checkbox" data-overlay="fib"> <span>Fibonacci</span></label>
+                                <label class="overlay-toggle"><input type="checkbox" data-overlay="ichimoku"> <span>Ichimoku</span></label>
+                            </div>
+                        </div>
+                        <div style="position:relative; height:350px; width:100%">
+                            <canvas id="price-chart" aria-label="Price history chart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Existing: RSI + MACD -->
+                    <div class="grid-2">
+                        <div class="card">
+                            <h3>RSI (Relative Strength Index)</h3>
+                            <div class="chart-wrap"><canvas id="rsi-chart" aria-label="RSI chart"></canvas></div>
+                        </div>
+                        <div class="card">
+                            <h3>MACD &amp; Histogram</h3>
+                            <div class="chart-wrap"><canvas id="macd-chart" aria-label="MACD chart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Existing: Volume -->
+                    <div class="card">
+                        <h3>Volume</h3>
+                        <div class="chart-wrap"><canvas id="volume-chart" aria-label="Volume chart"></canvas></div>
+                    </div>
+
+                    <!-- NEW: Momentum Indicators -->
+                    <div class="indicator-section">
+                        <div class="indicator-section-title">Momentum Indicators</div>
+                        <div class="grid-2">
+                            <div class="card"><h3>Stochastic %K/%D</h3><div class="chart-wrap"><canvas id="stoch-chart" aria-label="Stochastic oscillator"></canvas></div></div>
+                            <div class="card"><h3>Williams %R</h3><div class="chart-wrap"><canvas id="williams-chart" aria-label="Williams percent R"></canvas></div></div>
+                        </div>
+                        <div class="grid-2">
+                            <div class="card"><h3>CCI (Commodity Channel Index)</h3><div class="chart-wrap"><canvas id="cci-chart" aria-label="CCI chart"></canvas></div></div>
+                            <div class="card"><h3>MACD Histogram</h3><div class="chart-wrap"><canvas id="macd-hist-chart" aria-label="MACD histogram"></canvas></div></div>
+                        </div>
+                    </div>
+
+                    <!-- NEW: Trend Indicators -->
+                    <div class="indicator-section">
+                        <div class="indicator-section-title">Trend Indicators</div>
+                        <div class="grid-2">
+                            <div class="card"><h3>ADX &amp; DMI (+DI/-DI)</h3><div class="chart-wrap"><canvas id="adx-chart" aria-label="ADX and DMI chart"></canvas></div></div>
+                            <div class="card"><h3>OBV (On-Balance Volume)</h3><div class="chart-wrap"><canvas id="obv-chart" aria-label="OBV chart"></canvas></div></div>
+                        </div>
+                        <div class="card"><h3>ATR (Average True Range)</h3><div class="chart-wrap"><canvas id="atr-chart" aria-label="ATR chart"></canvas></div></div>
+                    </div>
+
+                    <!-- NEW: Fundamentals -->
+                    <div class="indicator-section">
+                        <div class="indicator-section-title">Fundamentals</div>
+                        <div id="fundamentals-card" class="card fundamentals-grid-card">
+                            <div id="fundamentals-grid" class="fundamentals-grid">
+                                <span class="hint">Loading fundamentals...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Earnings Report -->
+                    <div class="indicator-section" id="earnings-section" style="display:none">
+                        <div class="indicator-section-title">Earnings Reports</div>
+                        <div id="earnings-card" class="card">
+                            <div id="earnings-signal-bar" class="earnings-signal-bar"></div>
+                            <div id="earnings-next" class="earnings-next"></div>
+                            <table class="earnings-table" id="earnings-table">
+                                <thead>
+                                    <tr>
+                                        <th>Period</th>
+                                        <th>Date</th>
+                                        <th>EPS Est.</th>
+                                        <th>EPS Actual</th>
+                                        <th>Surprise</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="earnings-table-body">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div><!-- /analysis-layout -->
     </div>
 
     <!-- ===== TAB 2: SECTOR OVERVIEW ===== -->
-    <div id="sector-tab" class="tab-content">
-        <div class="card">
-            <h3>Industry Sector Heatmap</h3>
-            <p class="hint">Click "Load Sector Analysis" to analyze all 11 GICS sectors using their ETFs.</p>
-            <button id="load-sectors-btn" onclick="loadSectors()">Load Sector Analysis</button>
+    <div id="sector-tab" class="tab-content" role="tabpanel">
+
+        <!-- Header -->
+        <div class="sector-header-area">
+            <div class="sector-header-left">
+                <div class="sector-header-title">Sector Heatmap</div>
+                <div class="sector-header-sub">11 GICS sectors · Score: +1.0 = strongly bullish, -1.0 = strongly bearish, 0 = neutral · Click a sector to drill down</div>
+            </div>
+            <button id="load-sectors-btn" class="btn-primary" data-action="load-sectors">▦ Run Analysis</button>
         </div>
 
-        <div id="sector-loading" class="loading hidden">
+        <div id="sector-loading" class="loading hidden" aria-live="polite">
             <div class="spinner"></div>
-            <span>Analyzing 11 sectors... this may take a moment</span>
+            <span>Analysing 11 sectors… this may take a moment</span>
         </div>
 
         <div id="sector-heatmap" class="hidden">
-            <div class="card">
-                <h3>Sector Rankings (Best to Worst)</h3>
-                <canvas id="sector-bar-chart"></canvas>
+            <!-- Bar chart — full width ranking overview -->
+            <div class="card sector-bar-card">
+                <h3>Sector Rankings — Score vs Benchmark</h3>
+                <canvas id="sector-bar-chart" aria-label="Sector bar chart"></canvas>
             </div>
-            <div class="card">
-                <h3>Sector Signal Comparison</h3>
-                <canvas id="sector-radar-chart"></canvas>
+
+            <!-- Bottom: radar + ranked list -->
+            <div class="sector-bottom-layout">
+            <div class="sector-legend">
+                <span class="sector-legend-item"><span class="legend-dot up"></span> Bullish (&gt;0.2)</span>
+                <span class="sector-legend-item"><span class="legend-dot neutral"></span> Neutral (-0.2 to 0.2)</span>
+                <span class="sector-legend-item"><span class="legend-dot down"></span> Bearish (&lt;-0.2)</span>
+                <span class="sector-legend-item hint">Score = weighted avg of technical + momentum signals</span>
             </div>
-            <div id="sector-grid" class="grid-3"></div>
+                <div class="card sector-radar-card">
+                    <h3>Signal Radar</h3>
+                    <canvas id="sector-radar-chart" aria-label="Sector radar chart"></canvas>
+                </div>
+                <div class="sector-ranked-list" id="sector-grid"></div>
+            </div>
         </div>
+
     </div>
 
     <!-- ===== TAB 3: NEWS HUB (All Platforms) ===== -->
-    <div id="newshub-tab" class="tab-content">
+    <div id="newshub-tab" class="tab-content" role="tabpanel">
+
+        <!-- Header -->
         <div class="card">
             <div class="newshub-header">
                 <div>
-                    <h3>Unified News Hub</h3>
-                    <p class="hint">Aggregates news from all platforms: Finnhub (US), Google News MY, The Edge Markets, GDELT geopolitical, and influential figures. All stored in database.</p>
+                    <h3>News Intelligence Hub</h3>
+                    <p class="hint">Auto-updated every 30 min — classified by industry — FinBERT sentiment — AI verdict per sector</p>
                 </div>
                 <div class="newshub-actions">
-                    <button id="fetch-all-news-btn" onclick="fetchAllNews()">Fetch Latest from All Platforms</button>
-                    <button class="btn-secondary" onclick="loadStoredNews()">View Stored News</button>
+                    <div class="news-status-bar">
+                        <span class="news-status-dot" id="news-status-dot"></span>
+                        <span id="news-last-updated" class="news-last-updated">Checking…</span>
+                    </div>
+                    <div class="newshub-range-btns">
+                        <button class="range-btn active" data-action="news-range" data-arg="24">24h</button>
+                        <button class="range-btn" data-action="news-range" data-arg="72">3d</button>
+                        <button class="range-btn" data-action="news-range" data-arg="168">7d</button>
+                        <button class="range-btn" data-action="news-range" data-arg="">All</button>
+                    </div>
+                    <button id="fetch-all-news-btn" class="btn-sm btn-sm-outline" data-action="fetch-all-news" title="Force fetch new articles now">↻ Fetch</button>
                 </div>
             </div>
         </div>
 
-        <div id="newshub-loading" class="loading hidden">
+        <div id="newshub-loading" class="loading hidden" aria-live="polite">
             <div class="spinner"></div>
-            <span>Fetching news from all platforms...</span>
+            <span>Analysing news…</span>
         </div>
 
-        <!-- News Stats -->
+        <!-- Compact stats + mini charts -->
         <div id="newshub-stats" class="hidden">
-            <div class="grid-3">
-                <div class="card stat-card">
-                    <div class="stat-label">Total Articles</div>
-                    <div id="stat-total" class="stat-value">0</div>
+            <div class="card newshub-stats-row">
+                <div class="newshub-stat-block">
+                    <div class="stat-label">Articles</div>
+                    <div id="stat-total" class="stat-value-sm">0</div>
                 </div>
-                <div class="card stat-card">
-                    <div class="stat-label">Platforms</div>
-                    <div id="stat-platforms" class="stat-value">0</div>
+                <div class="newshub-stat-block">
+                    <div class="stat-label">Industries</div>
+                    <div id="stat-industries" class="stat-value-sm">0</div>
                 </div>
-                <div class="card stat-card">
-                    <div class="stat-label">Sentiment Ratio</div>
-                    <div id="stat-sentiment" class="stat-value">-</div>
+                <div class="newshub-stat-block">
+                    <div class="stat-label">Positive</div>
+                    <div id="stat-sentiment" class="stat-value-sm">-</div>
                 </div>
-            </div>
-            <div class="grid-2">
-                <div class="card">
-                    <h3>Articles by Platform</h3>
-                    <canvas id="platform-pie-chart"></canvas>
+                <div class="newshub-mini-charts">
+                    <div class="mini-chart-wrap">
+                        <div class="mini-chart-label">By Platform</div>
+                        <canvas id="platform-pie-chart" width="110" height="110" aria-label="Platform distribution"></canvas>
+                    </div>
+                    <div class="mini-chart-wrap">
+                        <div class="mini-chart-label">Sentiment</div>
+                        <canvas id="sentiment-pie-chart" width="110" height="110" aria-label="Sentiment distribution"></canvas>
+                    </div>
                 </div>
-                <div class="card">
-                    <h3>Sentiment Distribution</h3>
-                    <canvas id="sentiment-pie-chart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Platform Filter -->
-        <div id="newshub-filter" class="hidden">
-            <div class="filter-bar">
-                <span>Filter:</span>
-                <button class="filter-btn active" onclick="filterNews('all')">All</button>
-                <button class="filter-btn" onclick="filterNews('finnhub')">US Market</button>
-                <button class="filter-btn" onclick="filterNews('google-news-my')">MY Google News</button>
-                <button class="filter-btn" onclick="filterNews('theedge-my')">The Edge MY</button>
-                <button class="filter-btn" onclick="filterNews('newsapi-my')">NewsAPI MY</button>
-                <button class="filter-btn" onclick="filterNews('finnhub-figures')">Figures (US)</button>
-                <button class="filter-btn" onclick="filterNews('gdelt')">Geopolitical</button>
             </div>
         </div>
 
-        <!-- News List -->
-        <div id="newshub-list" class="card hidden">
-            <h3>News Feed <span id="newshub-count" class="hint"></span></h3>
-            <div id="newshub-articles"></div>
+        <!-- Industry Analysis Grid -->
+        <div id="industry-grid" class="hidden">
+            <div class="industry-grid-header">
+                <h3>Industry Breakdown</h3>
+                <p class="hint">Click any card to expand articles. Verdict powered by FinBERT sentence scoring.</p>
+            </div>
+            <div id="industry-cards" class="industry-cards-grid"></div>
         </div>
+
     </div>
 
     <!-- ===== TAB 4: PREDICTION TRENDS ===== -->
-    <div id="trends-tab" class="tab-content">
-        <div class="card">
-            <h3>Prediction History & Trends</h3>
-            <p class="hint">Track how predictions change over time. Run predictions multiple times to build trend data. All predictions are automatically saved to the database.</p>
-            <div class="search-bar">
-                <input type="text" id="trend-symbol-input" placeholder="Enter symbol to view trend (e.g., TSLA)" />
-                <select id="trend-days-select">
+    <div id="trends-tab" class="tab-content" role="tabpanel">
+
+        <!-- Header + search -->
+        <div class="trends-header-area">
+            <div class="trends-header-left">
+                <div class="trends-header-title">Prediction Trends</div>
+                <div class="trends-header-sub">Track how AI predictions evolve over time · click any row to view that symbol's trend</div>
+            </div>
+            <div class="trends-search-row">
+                <input type="text" id="trend-symbol-input" placeholder="Symbol (e.g. TSLA, 1155.KL)" aria-label="Trend symbol" />
+                <select id="trend-days-select" aria-label="Trend period">
                     <option value="7">7 Days</option>
                     <option value="30" selected>30 Days</option>
                     <option value="90">90 Days</option>
                 </select>
-                <button onclick="loadTrend()">View Trend</button>
-                <button class="btn-secondary" onclick="loadPredictionHistory()">All History</button>
+                <button class="btn-primary" data-action="load-trend">View Trend</button>
             </div>
+            <!-- Tracked symbol chips -->
+            <div id="tracked-symbols-list" class="trends-symbol-chips"></div>
         </div>
 
-        <div id="trends-loading" class="loading hidden">
+        <div id="trends-loading" class="loading hidden" aria-live="polite">
             <div class="spinner"></div>
-            <span>Loading trends...</span>
+            <span>Loading…</span>
         </div>
 
-        <!-- Tracked Symbols -->
-        <div id="tracked-symbols" class="card hidden">
-            <h3>Tracked Symbols</h3>
-            <div id="tracked-symbols-list" class="quick-picks"></div>
-        </div>
+        <!-- Two-column main area -->
+        <div class="trends-layout">
 
-        <!-- Trend Chart -->
-        <div id="trend-chart-section" class="hidden">
-            <div class="card">
-                <h3>Prediction Score Over Time: <span id="trend-chart-symbol"></span></h3>
-                <canvas id="trend-score-chart"></canvas>
-            </div>
-            <div class="grid-2">
-                <div class="card">
-                    <h3>Confidence Over Time</h3>
-                    <canvas id="trend-confidence-chart"></canvas>
-                </div>
-                <div class="card">
-                    <h3>Price vs Prediction</h3>
-                    <canvas id="trend-price-chart"></canvas>
+            <!-- LEFT: history feed -->
+            <div class="trends-left-col">
+                <div class="card trends-history-card">
+                    <div class="trends-history-header">
+                        <h3>Recent Predictions</h3>
+                        <span id="history-count" class="trends-count"></span>
+                    </div>
+                    <div id="history-section" class="hidden">
+                        <div class="trends-hist-list" id="history-tbody"></div>
+                    </div>
+                    <div id="history-empty" class="hint" style="padding:12px 0">
+                        No predictions yet — run an analysis first.
+                    </div>
                 </div>
             </div>
+
+            <!-- RIGHT: trend charts -->
+            <div class="trends-right-col">
+                <div id="trend-chart-section" class="hidden">
+                    <div class="card trend-chart-card">
+                        <div class="trend-card-header">
+                            <span class="card-label-sm">Score Over Time</span>
+                            <span id="trend-chart-symbol" class="trends-chart-sym"></span>
+                        </div>
+                        <div class="trend-chart-wrap">
+                            <canvas id="trend-score-chart" aria-label="Score trend chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="trend-mini-row">
+                        <div class="card trend-chart-card">
+                            <span class="card-label-sm">Confidence</span>
+                            <div class="trend-mini-wrap">
+                                <canvas id="trend-confidence-chart" aria-label="Confidence trend chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card trend-chart-card">
+                            <span class="card-label-sm">Price vs Score</span>
+                            <div class="trend-mini-wrap">
+                                <canvas id="trend-price-chart" aria-label="Price vs score chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="trend-empty-state" class="card trends-empty-state">
+                    <div class="trends-empty-icon">↗</div>
+                    <div class="trends-empty-text">Select a symbol from the history to view its prediction trend</div>
+                </div>
+                <div id="trend-no-data-state" class="card trends-empty-state hidden">
+                    <div class="trends-empty-icon">⚠</div>
+                    <div class="trends-empty-text">No predictions found for <strong id="trend-no-data-symbol"></strong></div>
+                    <button class="btn-primary" style="margin-top:12px" id="trend-analyze-btn" data-action="go-analyze">Run Analysis Now</button>
+                </div>
+            </div>
+
         </div>
 
-        <!-- History Table -->
-        <div id="history-section" class="card hidden">
-            <h3>Prediction History</h3>
+        <!-- Sector trends — full width below -->
+        <div class="card trends-sector-card" style="margin-top:14px;">
+            <div class="trends-sector-header">
+                <div>
+                    <h3>Sector Prediction Trends</h3>
+                    <p class="hint" style="margin:0">Historical sector scores over time — requires multiple sector analysis runs</p>
+                </div>
+                <button class="btn-sm" data-action="load-sector-history">Load Sector Trends</button>
+            </div>
+            <div id="sector-trend-loading" class="loading hidden"><div class="spinner"></div></div>
+            <div id="sector-history-section" class="hidden" style="margin-top:12px;">
+                <canvas id="sector-trend-chart" aria-label="Sector trend chart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ===== TAB 5: DAILY REPORT ===== -->
+    <div id="report-tab" class="tab-content" role="tabpanel">
+        <div class="report-header-area">
+            <div class="report-header-left">
+                <div class="report-header-title">Daily Prediction Report</div>
+                <div class="report-header-sub">All Bursa stocks ranked by prediction score — run batch analysis to refresh</div>
+            </div>
+            <div class="report-actions">
+                <div class="report-filters">
+                    <select id="report-filter-action" aria-label="Filter by action">
+                        <option value="">All Actions</option>
+                        <option value="STRONG BUY">Strong Buy</option>
+                        <option value="BUY">Buy</option>
+                        <option value="HOLD">Hold</option>
+                        <option value="SELL">Sell</option>
+                        <option value="STRONG SELL">Strong Sell</option>
+                    </select>
+                    <select id="report-filter-industry" aria-label="Filter by industry">
+                        <option value="">All Industries</option>
+                    </select>
+                    <input type="range" id="report-filter-confidence" min="0" max="100" value="0" aria-label="Minimum confidence">
+                    <span id="report-conf-label" class="report-conf-label">Min: 0%</span>
+                </div>
+                <button class="btn-primary" data-action="run-batch-predict">▤ Run Batch Analysis</button>
+            </div>
+        </div>
+
+        <div id="report-loading" class="loading hidden" aria-live="polite">
+            <div class="spinner"></div><span>Loading predictions...</span>
+        </div>
+
+        <div id="report-status" class="report-status hidden"></div>
+
+        <div id="report-table-wrap" class="hidden">
+            <div class="report-summary" id="report-summary"></div>
             <div class="table-container">
-                <table id="history-table">
+                <table class="report-table">
                     <thead>
                         <tr>
-                            <th>Time</th>
-                            <th>Symbol</th>
-                            <th>Action</th>
-                            <th>Confidence</th>
+                            <th>Stock</th>
+                            <th>Industry</th>
                             <th>Price</th>
+                            <th>Change</th>
+                            <th>Prediction</th>
+                            <th>Confidence</th>
                             <th>Score</th>
+                            <th>Updated</th>
                         </tr>
                     </thead>
-                    <tbody id="history-tbody"></tbody>
+                    <tbody id="report-tbody"></tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Sector Trends -->
-        <div class="card">
-            <h3>Sector Prediction History</h3>
-            <button onclick="loadSectorHistory()">Load Sector Trends</button>
-            <div id="sector-trend-loading" class="loading hidden"><div class="spinner"></div></div>
-            <div id="sector-history-section" class="hidden">
-                <canvas id="sector-trend-chart"></canvas>
+        <div id="report-empty" class="card trends-empty-state">
+            <div class="trends-empty-icon">▤</div>
+            <div class="trends-empty-text">No predictions yet. Click "Run Batch Analysis" to generate predictions for all Bursa stocks.</div>
+        </div>
+    </div>
+
+    <!-- ===== TAB 6: MODEL INFO ===== -->
+    <div id="model-tab" class="tab-content" role="tabpanel">
+
+        <div class="model-header">
+            <div>
+                <div class="model-header-title">AI Model Overview</div>
+                <div class="model-header-sub">Transparency dashboard — every feature, data source, and metric that powers StockSight predictions</div>
             </div>
         </div>
+
+        <div id="model-loading" class="loading hidden" aria-live="polite">
+            <div class="spinner"></div><span>Loading model info...</span>
+        </div>
+
+        <div id="model-content" class="hidden">
+
+            <!-- Performance Metrics -->
+            <div class="model-section">
+                <div class="model-section-title">Model Performance</div>
+                <div id="model-metrics" class="model-metrics-grid"></div>
+            </div>
+
+            <!-- Feature Importance Chart -->
+            <div class="model-section">
+                <div class="model-section-title">Top Feature Importance</div>
+                <div class="card">
+                    <div class="chart-wrap"><canvas id="feature-importance-chart" aria-label="Feature importance chart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Signal Weights -->
+            <div class="model-section">
+                <div class="model-section-title">Signal Weights</div>
+                <div id="model-weights" class="model-weights-grid"></div>
+            </div>
+
+            <!-- Feature Categories Table -->
+            <div class="model-section">
+                <div class="model-section-title">All Features Used for Training</div>
+                <div class="card">
+                    <div class="table-container">
+                        <table class="model-features-table">
+                            <thead>
+                                <tr><th>Category</th><th>Features</th><th>Source</th><th>Count</th></tr>
+                            </thead>
+                            <tbody id="model-features-tbody"></tbody>
+                            <tfoot>
+                                <tr><td colspan="3"><strong>Total Features</strong></td><td id="model-total-features"><strong>0</strong></td></tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Training Data Stats -->
+            <div class="model-section">
+                <div class="model-section-title">Training Data</div>
+                <div id="model-data-stats" class="model-data-grid"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ===== TAB 7: BURSA MARKET ===== -->
+    <div id="bursa-tab" class="tab-content" role="tabpanel">
+
+        <!-- KLCI index bar -->
+        <div class="bursa-index-bar card">
+            <div class="bursa-index-left">
+                <span class="bursa-index-label">KLCI</span>
+                <span id="klci-price" class="bursa-index-price">—</span>
+                <span id="klci-change" class="bursa-index-change">—</span>
+            </div>
+            <div class="bursa-index-right">
+                <span id="bursa-market-status" class="market-status-badge">—</span>
+                <span id="bursa-last-updated" class="bursa-updated">—</span>
+                <span id="bursa-closed-msg" class="bursa-closed-msg hidden">Prices as of last close</span>
+                <button class="btn-sm" data-action="refresh-bursa">↻ Refresh</button>
+                <button id="bursa-auto-refresh-btn" class="btn-sm btn-sm-active" data-action="toggle-bursa-auto-refresh" title="Toggle auto-refresh">Auto ●</button>
+                <button class="btn-sm btn-sm-outline" data-action="load-accuracy">Accuracy</button>
+            </div>
+        </div>
+
+        <div id="bursa-loading" class="loading hidden" aria-live="polite">
+            <div class="spinner"></div>
+            <div class="analysis-progress">
+                <div id="bursa-status-text" class="analysis-status-text">Fetching market data…</div>
+                <div class="analysis-steps" id="bursa-steps"></div>
+            </div>
+        </div>
+
+        <!-- My Watchlist -->
+        <div id="watchlist-section" class="card watchlist-card hidden">
+            <div class="watchlist-header">
+                <div class="watchlist-title-group">
+                    <span class="watchlist-icon">★</span>
+                    <h3>My Watchlist</h3>
+                    <span id="watchlist-count" class="watchlist-count"></span>
+                </div>
+                <button class="btn-sm btn-sm-outline" data-action="toggle-watchlist-collapse" aria-label="Collapse watchlist">▾</button>
+            </div>
+            <div id="watchlist-body">
+                <div id="watchlist-rows"></div>
+                <div id="watchlist-empty" class="watchlist-empty hidden">
+                    <span class="watchlist-empty-star">☆</span>
+                    <span>Star stocks from the list below to add them here</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Industry watchlists grid -->
+        <div id="bursa-industry-grid" class="hidden">
+            <div id="bursa-industry-cards"></div>
+        </div>
+
+        <!-- Stock detail panel (slides in when a stock is clicked) -->
+        <div id="bursa-detail-panel" class="card bursa-detail-panel hidden">
+            <div class="bursa-detail-header">
+                <div class="bursa-detail-title-group">
+                    <button id="detail-star-btn" class="star-btn" data-action="toggle-watchlist" aria-label="Toggle watchlist">☆</button>
+                    <span id="bursa-detail-symbol" class="bursa-chart-sym"></span>
+                    <span id="bursa-detail-name" class="bursa-detail-name"></span>
+                </div>
+                <div class="bursa-detail-price-group">
+                    <span id="bursa-detail-price" class="bursa-detail-price"></span>
+                    <span id="bursa-detail-change" class="bursa-detail-change"></span>
+                </div>
+                <div class="bursa-detail-actions">
+                    <div class="bursa-period-btns">
+                        <button class="period-btn active" data-action="bursa-period" data-arg="1d">1D</button>
+                        <button class="period-btn" data-action="bursa-period" data-arg="5d">5D</button>
+                        <button class="period-btn" data-action="bursa-period" data-arg="1mo">1M</button>
+                        <button class="period-btn" data-action="bursa-period" data-arg="3mo">3M</button>
+                    </div>
+                    <a id="bursa-detail-fullpage" href="#" target="_blank" rel="noopener" class="btn-sm btn-sm-outline">Full Page ↗</a>
+                    <button class="btn-sm" data-action="close-detail">✕ Close</button>
+                </div>
+            </div>
+            <div class="bursa-detail-body">
+                <div class="bursa-detail-main">
+                    <div class="bursa-chart-wrap">
+                        <canvas id="bursa-price-chart" aria-label="Bursa stock price chart"></canvas>
+                    </div>
+                    <div id="bursa-chart-fundamentals" class="bursa-fundamentals"></div>
+                </div>
+
+                <!-- Order Book panel -->
+                <div class="ob-panel">
+                    <div class="ob-header">
+                        <span class="ob-title">Order Book</span>
+                        <span id="ob-source-badge" class="ob-source-badge"></span>
+                    </div>
+                    <div id="ob-loading" class="ob-loading">Loading…</div>
+                    <div id="ob-content" class="hidden">
+                        <!-- Pressure bar -->
+                        <div class="ob-pressure-wrap">
+                            <span class="ob-pressure-label up">BUY</span>
+                            <div class="ob-pressure-track">
+                                <div id="ob-pressure-fill" class="ob-pressure-fill"></div>
+                            </div>
+                            <span class="ob-pressure-label down">SELL</span>
+                        </div>
+                        <div class="ob-pressure-pct-row">
+                            <span id="ob-bid-pct" class="up"></span>
+                            <span id="ob-spread" class="ob-spread-val"></span>
+                            <span id="ob-ask-pct" class="down"></span>
+                        </div>
+
+                        <!-- Bid / Ask columns -->
+                        <div class="ob-columns">
+                            <div class="ob-col">
+                                <div class="ob-col-header"><span>Size</span><span>Bid</span></div>
+                                <div id="ob-bids" class="ob-rows"></div>
+                            </div>
+                            <div class="ob-col">
+                                <div class="ob-col-header ob-ask-header"><span>Ask</span><span>Size</span></div>
+                                <div id="ob-asks" class="ob-rows"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="ob-error" class="ob-error hidden"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Accuracy panel (existing, preserved for Accuracy button) -->
+        <div id="bursa-watchlist-section" class="hidden">
+            <div class="bursa-main-layout">
+                <div class="bursa-right-col">
+                    <div class="card bursa-accuracy-card">
+                        <div class="bursa-accuracy-top">
+                            <span class="bursa-col-title">Prediction Accuracy</span>
+                            <div id="accuracy-loading-inline" class="hidden" style="font-size:0.75rem;color:var(--text-muted)">Loading…</div>
+                        </div>
+                        <div id="accuracy-section" class="hidden">
+                            <div class="bursa-acc-stats">
+                                <div class="acc-stat"><div class="stat-label">Predictions</div><div id="acc-total" class="acc-stat-val">—</div></div>
+                                <div class="acc-stat"><div class="stat-label">With Data</div><div id="acc-with-data" class="acc-stat-val">—</div></div>
+                                <div class="acc-stat"><div class="stat-label">Accuracy</div><div id="acc-pct" class="acc-stat-val">—</div></div>
+                            </div>
+                            <div class="bursa-scatter-wrap"><canvas id="accuracy-scatter" aria-label="Accuracy scatter plot"></canvas></div>
+                        </div>
+                        <div id="accuracy-empty" class="hint" style="font-size:0.8rem;padding:8px 0">
+                            Click <strong>Accuracy</strong> above to load.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="accuracy-log" class="card hidden" style="margin-top:16px;">
+                <h3 style="margin-bottom:10px;font-size:0.9rem;">Prediction Log</h3>
+                <div class="table-container">
+                    <table class="bursa-compact-table">
+                        <thead><tr><th>Symbol</th><th>Action</th><th>Conf</th><th>Entry</th><th>Current</th><th>Return</th><th>Outcome</th><th>Date</th></tr></thead>
+                        <tbody id="accuracy-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- FOOTER -->
     <footer class="footer">
-        <p>For educational purposes only. Do not make investment decisions based solely on this tool.</p>
-        <p>Data: Yahoo Finance &bull; Finnhub &bull; FinBERT &bull; GDELT &bull; Reddit | SQLite Database</p>
+        <span>Yahoo Finance · Finnhub · FinBERT · NewsAPI · SQLite</span>
     </footer>
 
-    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <!-- TOAST CONTAINER -->
+    <div id="toast-container" aria-live="assertive"></div>
+
+    <!-- STOCK DETAIL MODAL -->
+    <div id="stock-modal" class="stock-modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Stock detail">
+        <div class="stock-modal-box">
+            <div class="stock-modal-header">
+                <div class="stock-modal-title-group">
+                    <span id="sm-symbol" class="stock-modal-symbol"></span>
+                    <span id="sm-name" class="stock-modal-name"></span>
+                </div>
+                <button class="stock-modal-close" data-action="close-modal" aria-label="Close modal">✕</button>
+            </div>
+
+            <div class="stock-modal-quote" id="sm-quote-row">
+                <span id="sm-price" class="sm-price">—</span>
+                <span id="sm-change" class="sm-change">—</span>
+                <span id="sm-change-pct" class="sm-change-pct">—</span>
+                <span id="sm-range" class="sm-range-label">—</span>
+            </div>
+
+            <div class="stock-modal-periods">
+                <button class="period-btn sm-period active" data-action="sm-period" data-arg="1d">1D</button>
+                <button class="period-btn sm-period" data-action="sm-period" data-arg="5d">5D</button>
+                <button class="period-btn sm-period" data-action="sm-period" data-arg="1mo">1M</button>
+                <button class="period-btn sm-period" data-action="sm-period" data-arg="3mo">3M</button>
+            </div>
+
+            <div class="stock-modal-chart-wrap">
+                <div id="sm-chart-loading" class="sm-loading">Loading chart…</div>
+                <canvas id="sm-chart" class="hidden" aria-label="Stock modal chart"></canvas>
+            </div>
+
+            <div class="stock-modal-footer">
+                <span id="sm-vol" class="sm-meta-item">Vol: —</span>
+                <span id="sm-high" class="sm-meta-item">H: —</span>
+                <span id="sm-low" class="sm-meta-item">L: —</span>
+                <a id="sm-bursa-link" class="sm-meta-link" href="#" target="_blank" rel="noopener noreferrer">Open full page ↗</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== CATALYST TAB ========== -->
+    <div id="catalyst-tab" class="tab-content" role="tabpanel">
+        <div class="catalyst-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <div>
+                <h2 style="margin:0;">Catalyst Alerts</h2>
+                <p class="text-muted" style="margin:0.25rem 0 0;">News-driven stock picks — updated every 30 min</p>
+            </div>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+                <span id="catalyst-last-scan" class="text-muted" style="font-size:0.85rem;"></span>
+                <button class="btn btn-sm" data-action="catalyst-scan">Scan Now</button>
+            </div>
+        </div>
+
+        <div id="catalyst-events" class="card" style="margin-bottom:1rem;">
+            <h3 style="margin-top:0;">Detected Events</h3>
+            <div id="catalyst-events-list" class="skeleton-lines">
+                <div class="skeleton-line"></div>
+                <div class="skeleton-line"></div>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+            <div id="catalyst-direct-us" class="card">
+                <h3 style="margin-top:0;">US Stock Mentions <span class="text-muted" style="font-size:0.85rem;font-weight:normal;">(S&P 500)</span></h3>
+                <div id="catalyst-direct-us-list" class="skeleton-lines">
+                    <div class="skeleton-line"></div>
+                </div>
+            </div>
+            <div id="catalyst-direct-my" class="card">
+                <h3 style="margin-top:0;">Bursa Stock Mentions <span class="text-muted" style="font-size:0.85rem;font-weight:normal;">(KLSE)</span></h3>
+                <div id="catalyst-direct-my-list" class="skeleton-lines">
+                    <div class="skeleton-line"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="catalyst-picks" class="card">
+            <h3 style="margin-top:0;">Top Stock Picks <span class="text-muted" style="font-size:0.85rem;font-weight:normal;">(next 24h — direct + industry)</span></h3>
+            <div id="catalyst-picks-list" class="skeleton-lines">
+                <div class="skeleton-line"></div>
+                <div class="skeleton-line"></div>
+                <div class="skeleton-line"></div>
+            </div>
+        </div>
+
+        <div id="catalyst-history" class="card" style="margin-top:1rem;">
+            <h3 style="margin-top:0;">Recent History</h3>
+            <div id="catalyst-history-list"></div>
+        </div>
+    </div>
+
+    <!-- Scripts: core → tabs → main -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tab-analysis.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tab-sectors.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tab-news.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tab-trends.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tab-report.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tab-model.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tab-bursa.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/tab-catalyst.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

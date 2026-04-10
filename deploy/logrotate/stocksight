@@ -1,0 +1,12 @@
+/var/log/stocksight/*.log {
+    daily
+    missingok
+    rotate 14
+    compress
+    delaycompress
+    notifempty
+    create 0640 stocksight stocksight
+    postrotate
+        systemctl reload stocksight-web 2>/dev/null || true
+    endscript
+}

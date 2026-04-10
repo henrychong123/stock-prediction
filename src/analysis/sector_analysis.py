@@ -88,7 +88,7 @@ MY_SECTORS = {
         "symbols": ["6947.KL", "6888.KL", "6012.KL", "4863.KL"],
         "etf": "6947.KL",  # CelcomDigi as proxy
     },
-    "Plantation": {
+    "Plantation & Agriculture": {
         "description": "Palm oil, rubber, timber, agriculture",
         "symbols": ["5285.KL", "2445.KL", "1961.KL"],
         "etf": "5285.KL",  # Sime Darby Plantation as proxy
@@ -98,7 +98,7 @@ MY_SECTORS = {
         "symbols": ["5225.KL", "5168.KL", "7113.KL"],
         "etf": "5225.KL",  # IHH Healthcare as proxy
     },
-    "Utilities & Power": {
+    "Utilities & Energy": {
         "description": "Electricity, gas, water, renewable energy",
         "symbols": ["5347.KL", "6742.KL"],
         "etf": "5347.KL",  # Tenaga Nasional as proxy

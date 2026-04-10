@@ -146,12 +146,34 @@ def get_social_signal(symbol: str) -> dict:
     if not valid_posts:
         return {"signal": "neutral", "strength": 0.5, "post_count": 0, "reasons": ["No posts found"]}
 
-    # Weight sentiment by post popularity (upvotes)
+    # Build set of influential figure names for boost detection
+    from config.settings import INFLUENTIAL_FIGURES, MY_INFLUENTIAL_FIGURES
+    all_figures = [f.lower() for f in INFLUENTIAL_FIGURES + MY_INFLUENTIAL_FIGURES]
+
+    # Weight sentiment by post popularity (upvotes) + figure boost
     weighted_scores = []
     total_weight = 0
+    figure_mentions = []
+
     for post in valid_posts:
         weight = max(post.get("score", 1), 1)  # Minimum weight of 1
         score = post["sentiment"]["score"]
+
+        # Boost posts that mention influential figures (1.5x weight)
+        title_lower = post.get("title", "").lower()
+        mentioned_figure = None
+        for fig in all_figures:
+            if fig in title_lower:
+                weight *= 1.5
+                mentioned_figure = fig.title()
+                figure_mentions.append({
+                    "figure": mentioned_figure,
+                    "title": post.get("title", ""),
+                    "sentiment": post["sentiment"]["label"],
+                    "score": post.get("score", 0),
+                })
+                break
+
         weighted_scores.append(score * weight)
         total_weight += weight
 
@@ -168,10 +190,15 @@ def get_social_signal(symbol: str) -> dict:
     # Top discussed posts
     top_posts = [f"[r/{p['subreddit']}] {p['title']} (↑{p['score']})" for p in valid_posts[:5]]
 
+    # Add figure-related posts to reasons
+    for fm in figure_mentions[:3]:
+        top_posts.append(f"[{fm['figure']}] {fm['title']}")
+
     return {
         "signal": signal,
         "strength": round(strength, 3),
         "avg_sentiment": round(avg_sentiment, 3),
         "post_count": len(valid_posts),
+        "figure_mentions": figure_mentions,
         "reasons": top_posts,
     }
