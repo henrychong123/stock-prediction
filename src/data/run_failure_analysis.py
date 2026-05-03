@@ -47,6 +47,9 @@ def _build_prompt(pick: dict) -> str:
     exit_p = pick.get("exit_price") or 0
     reasoning = pick.get("reasoning") or ""
     report_created = pick.get("report_created") or ""
+    peak_fav = pick.get("peak_favorable_move")
+    max_adv = pick.get("max_adverse_move")
+    dir_hit = pick.get("directional_hit")
 
     # Pull technicals from picks_json if available
     technicals_str = ""
@@ -73,6 +76,16 @@ def _build_prompt(pick: dict) -> str:
 
     actual_dir = "bullish" if actual_move > 0 else "bearish"
 
+    if peak_fav is None or max_adv is None:
+        intra_block = "Intra-window extremes: (not measured for this pick)"
+    else:
+        hit_str = "yes" if dir_hit else "no"
+        intra_block = (
+            f"Peak in your favour: {peak_fav:+.2f}%   (best the stock got vs entry, in your direction)\n"
+            f"Max adverse move:    {max_adv:+.2f}%   (worst the stock got vs entry, against you)\n"
+            f"Directional hit:     {hit_str}   (stock moved >=0.5% in your direction at some point)"
+        )
+
     return f"""{SYSTEM_PROMPT}
 
 FAILED PREDICTION
@@ -80,9 +93,11 @@ FAILED PREDICTION
 Symbol:       {symbol}
 Report date:  {report_created[:10]}
 Predicted:    {direction}  ({'+' if predicted_move >= 0 else ''}{predicted_move:.1f}% move, {confidence}% confidence)
-Actual:       {actual_dir}  ({'+' if actual_move >= 0 else ''}{actual_move:.2f}% in 24h)
+Actual:       {actual_dir}  ({'+' if actual_move >= 0 else ''}{actual_move:.2f}% in 24h close-to-close)
 Entry price:  {entry:.4f}
 Exit price:   {exit_p:.4f}
+
+{intra_block}
 
 Original reasoning:
 {reasoning}
@@ -91,9 +106,12 @@ Signal context at prediction time:
 {technicals_str if technicals_str else '(not available)'}
 
 GUIDANCE on primary_reason
+- IMPORTANT: if `Directional hit: yes` AND close-to-close was wrong, this is a
+  TIMING failure — pick `timing`. The direction was right; the call would have
+  worked with a tighter exit. Do NOT blame metrics for a timing failure.
 - Default to `no_clear_signal` if the move looks like noise / nothing in the data
-  predicted it. A 24h move of <2% with no obvious catalyst usually IS noise —
-  do NOT confabulate a metric-based reason just because metrics are visible.
+  predicted it. A 24h close move of <2% with no directional hit and no obvious
+  catalyst usually IS noise — do NOT confabulate a metric-based reason.
 - Use `narrative_momentum` when the stock kept moving on persistent retail/
   institutional narrative (popularity, hype, story stocks like AAPL/NVDA/Top
   Glove rallies) that the bot under-weighted vs metrics like PE/RSI.
@@ -101,7 +119,8 @@ GUIDANCE on primary_reason
   insider accumulation likely drove the move — invisible in standard signals.
 - Only blame metric-flavoured reasons (`signal_conflict`, `overconfidence`,
   `momentum_reversal`) when the metrics actually predicted the wrong direction
-  cleanly. If metrics were ambiguous, prefer `no_clear_signal`.
+  cleanly AND directional hit was no. If metrics were ambiguous, prefer
+  `no_clear_signal`.
 
 Analyse the failure and respond ONLY with this JSON:
 {{
