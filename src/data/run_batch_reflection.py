@@ -212,6 +212,24 @@ def run(days: int = 30) -> dict:
     init_db()
 
     failures = get_wrong_picks_with_analysis(days=days)
+    # failure_analysis is stored as a JSON string in the DB — flatten its fields
+    # to the row dict so _build_prompt can read them directly.
+    parsed_failures = []
+    for f in failures:
+        fa_raw = f.get("failure_analysis")
+        if not fa_raw:
+            continue
+        try:
+            fa = json.loads(fa_raw) if isinstance(fa_raw, str) else fa_raw
+        except json.JSONDecodeError:
+            continue
+        merged = dict(f)
+        for k in ("primary_reason", "overweighted_signal", "underweighted_signal",
+                  "lesson", "market_condition"):
+            merged[k] = fa.get(k, "unknown")
+        parsed_failures.append(merged)
+    failures = parsed_failures
+
     if len(failures) < MIN_FAILURES_REQUIRED:
         log.info(
             "Only %d analysed failures (need %d) — skipping batch reflection",
