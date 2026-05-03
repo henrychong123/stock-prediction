@@ -1,4 +1,6 @@
 .env
+ngrok.yml
+logs/
 __pycache__/
 *.pyc
 .venv/

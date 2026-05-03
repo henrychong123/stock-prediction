@@ -4,7 +4,11 @@ Multi-signal stock prediction dashboard with AI-powered analysis for US (S&P 500
 
 Combines 7 signal sources — technical indicators (15+), news sentiment (FinBERT NLP), social media (Reddit), geopolitical events (GDELT), influential figure monitoring, earnings surprises (EPS beat/miss), and an XGBoost/LightGBM ML ensemble (~107 features) — into a single prediction with AI-optimized signal weights.
 
-**New: Catalyst Alerts** — scans news every 30 minutes, detects market-moving events (tariffs, rate decisions, supply chain disruptions, etc.), and predicts which stocks will rise or fall in the next 24 hours.
+**Catalyst Alerts** — scans news every 30 minutes, detects market-moving events (tariffs, rate decisions, supply chain disruptions, etc.), and predicts which stocks will rise or fall in the next 24 hours.
+
+**AI Analyst (self-learning)** — Claude reads news briefings, generates top picks 3x daily, then analyzes its own wrong picks via structured failure analysis. Weekly batch reflection compiles structured signal rules that constrain future picks. Wrong-pick training rows get boosted sample weight in the weekly ML retrain — real learning, not just prompt engineering.
+
+**Paper Trading** — 5 virtual RM50,000 strategies trade analyst picks with realistic Bursa fees (IB commission + SST + stamp duty, min RM10/trade). Dashboard shows equity curves, positions, win rate, realized P&L per strategy. Validates the full system before touching real capital.
 
 ## Quick Start
 
@@ -24,17 +28,36 @@ python web/app.py
 # Open http://localhost:5000
 ```
 
+## Remote Access (ngrok)
+
+For ad-hoc access to your local dashboard from any device on the internet (without setting up a VPS):
+
+```bash
+# 1. One-time: install ngrok, sign up, paste authtoken + reserved domain into ngrok.yml
+# 2. Add https://YOUR-DOMAIN.ngrok-free.dev/login/google/authorized as an authorized
+#    redirect URI in your Google Cloud OAuth client
+# 3. Set TRUST_PROXY=1 in .env (so url_for emits https for the OAuth callback)
+
+python web/app.py        # terminal 1
+start-tunnel.bat         # terminal 2
+```
+
+Auth (Google OAuth + `ALLOWED_EMAILS` allowlist) is enforced before any route, so the public URL is safe to share. To auto-start the tunnel at every login, run `setup_ngrok_task.bat` (registers `StockPred-NgrokTunnel` as an ONLOGON Windows task). For a real production deploy with a VPS + nginx + Let's Encrypt, see `deploy/DEPLOY.md`.
+
 ## Dashboard
 
-**5 tabs:**
+**8 tabs:**
 
 | Tab | What It Does |
 |-----|-------------|
-| **Home** | Dashboard overview: sector heatmap, prediction summary, active catalyst alerts. Sub-tabs: Sectors (11 GICS heatmap), Report (daily rankings with filters), Trends (prediction history + charts). |
-| **Stocks** | Unified stock analysis — search any stock (US or Bursa), 15+ indicators, ML prediction, earnings, fundamentals. Toggle to Bursa Market view: 80 stocks, 8 industries, watchlist, order book. |
-| **Catalyst** | News-driven 24h stock picks (75% accuracy). Scans 13 sources every 30 min, detects stock mentions (219 aliases), expands via knowledge graph (parent/subsidiary, supplier/customer, GLC peers). US + Bursa split. |
-| **News** | News Intelligence Hub with FinBERT sentiment, AI industry classification, 13 platform sources. |
-| **Settings** | AI model transparency: 107 features, accuracy metrics, feature importance, signal weights, training data stats. |
+| **Home** | Overview: sector heatmap, prediction summary, active catalyst alerts. Sub-tabs: Sectors, Report, Trends. |
+| **Stocks** | Search any stock (US or Bursa), 15+ indicators, ML prediction, earnings, fundamentals. Toggle to Bursa Market view. |
+| **Catalyst** | News-driven 24h stock picks. Scans 13 sources every 30 min, detects mentions across ~400 Bursa tickers, expands via knowledge graph. US + Bursa split. |
+| **Short-term** | Claude-reasoned Bursa picks across 24h / 3d / 7d horizons. Uses full article bodies, cascade analysis, accuracy-tracked outcomes. |
+| **AI Analyst** | Self-learning LLM picks with expandable scorecard rows showing original reasoning + "Why wrong?" failure analysis. Performance heatmap. |
+| **Paper Trading** | 5 virtual strategies trading analyst picks. Equity curves, open positions, realized P&L, win rate per strategy. |
+| **News** | News Intelligence Hub: FinBERT sentiment, AI industry classification, 13 platform sources. |
+| **Settings** | ML model transparency (107 features, accuracy, feature importance, signal weights) + live Scheduled Tasks panel showing all Windows Task Scheduler entries. |
 
 ## Prediction Engine
 
